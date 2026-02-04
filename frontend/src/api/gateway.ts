@@ -1,8 +1,10 @@
 const rawBase =
   process.env.REACT_APP_API_URL?.trim() ||
-  process.env.REACT_APP_API_BASE_URL?.trim() ||
-  'http://localhost:8080';
-const API_BASE = rawBase.replace(/\/+$/, '').replace(/\/api$/, '');
+  process.env.REACT_APP_API_BASE_URL?.trim();
+const fallbackBase =
+  typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8080';
+const baseCandidate = rawBase && rawBase.length ? rawBase : fallbackBase;
+const API_BASE = baseCandidate.replace(/\/+$/, '').replace(/\/api$/, '');
 
 export type InvoiceStatus =
   | 'DRAFT'

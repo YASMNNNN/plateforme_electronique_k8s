@@ -11,7 +11,7 @@ import Settings from './admin/Settings';
 
 const Admin = () => {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#ffffff,_#e7ecf7,_#d9e1f1)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#f8fcff,_#eef7f4,_#e6f1ef)]">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <Sidebar />
         <div className="flex flex-1 flex-col">

@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const titleMap: Record<string, string> = {
-  '/admin': 'Dashboard',
-  '/admin/invoices': 'Factures',
+  '/admin': 'Tableau de bord',
+  '/admin/invoices': 'Factures client',
   '/admin/invoices/new': 'Nouvelle facture',
   '/admin/clients': 'Clients',
   '/admin/payments': 'Paiements',
@@ -16,7 +16,7 @@ const AdminHeader = () => {
   const navigate = useNavigate();
 
   const title = useMemo(
-    () => titleMap[location.pathname] || 'Dashboard',
+    () => titleMap[location.pathname] || 'Tableau de bord',
     [location.pathname]
   );
 
@@ -28,10 +28,10 @@ const AdminHeader = () => {
   return (
     <header className="flex flex-col gap-4 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur-xl md:flex-row md:items-center md:justify-between">
       <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-ink-500">
+        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">
           Espace administrateur
         </p>
-        <h1 className="font-display text-2xl font-semibold text-ink-900">
+        <h1 className="font-display text-2xl font-semibold text-slate-900">
           {title}
         </h1>
       </div>
@@ -49,7 +49,7 @@ const AdminHeader = () => {
             <p className="text-sm font-semibold text-slate-900">
               Amel Dabbabi
             </p>
-            <p className="text-xs text-slate-500">Administratrice</p>
+            <p className="text-xs text-slate-500">Administrateur</p>
           </div>
           <span className="text-xs text-slate-400">▾</span>
         </button>
@@ -68,7 +68,7 @@ const AdminHeader = () => {
               onClick={handleLogout}
               className="w-full rounded-xl px-3 py-2 text-left font-medium text-rose-600 hover:bg-rose-50"
             >
-              Se deconnecter
+              Deconnexion
             </button>
           </div>
         ) : null}

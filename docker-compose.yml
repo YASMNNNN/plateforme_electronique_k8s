@@ -80,21 +80,6 @@ services:
       - plateforme-network
     restart: unless-stopped
 
-  # Config Server (if needed for centralized config)
-  config-server:
-    image: hyness/spring-cloud-config-server
-    container_name: plateforme-config
-    environment:
-      SPRING_PROFILES_ACTIVE: git
-      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: https://github.com/your-org/config-repo
-      SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCHPATHS: '{application}'
-    ports:
-      - "8888:8888"
-    networks:
-      - plateforme-network
-    restart: unless-stopped
-    # Remove this service if not using centralized config
-
   # API Gateway
   api-gateway:
     build:
@@ -119,7 +104,7 @@ services:
   invoice-service:
     build:
       context: ./services/invoice-service
-    container_name: plateforme-invoice
+        # container_name: plateforme-invoice  # SUPPRIMÉ
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -155,7 +140,7 @@ services:
   payment-service:
     build:
       context: ./services/payment-service
-    container_name: plateforme-payment
+    # container_name: plateforme-payment  # Commenté pour permettre le scaling
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -260,7 +245,7 @@ services:
       REACT_APP_KEYCLOAK_REALM: plateforme-electronique
       REACT_APP_KEYCLOAK_CLIENT_ID: plateforme-frontend
     ports:
-      - "3000:80"
+      - "3001:80"
     networks:
       - plateforme-network
     depends_on:

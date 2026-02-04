@@ -20,3 +20,4 @@ J’ai ajouté le seed et activé l’exécution de data.sql au démarrage.
 
   docker compose build invoice-service payment-service
   docker compose up -d invoice-service payment-service api-gateway
+codex resume 019bd02d-18c0-7922-af07-a2a037b41ffe

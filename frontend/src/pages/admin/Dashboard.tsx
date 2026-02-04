@@ -46,7 +46,7 @@ const Dashboard = () => {
       } catch (err) {
         if (!isMounted) return;
         setError(
-          "Impossible de charger les donnees via l'API Gateway. Affichage en mode hors ligne."
+          'Impossible de charger les donnees depuis la passerelle API. Mode hors ligne.'
         );
       } finally {
         if (isMounted) setLoading(false);
@@ -74,7 +74,7 @@ const Dashboard = () => {
       { label: 'Factures', value: totalInvoices.toString() },
       { label: 'Paiements', value: totalPayments.toString() },
       { label: 'Clients', value: uniqueClients.toString() },
-      { label: "Chiffre d'affaires", value: formatCurrency(revenue) },
+      { label: 'Revenus', value: formatCurrency(revenue) },
     ];
   }, [invoicePage, invoices, payments]);
 
@@ -150,7 +150,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-semibold text-slate-500">
-                Revenus 6 derniers mois
+                Revenus des 6 derniers mois
               </p>
               <p className="font-display text-2xl font-semibold text-ink-900">
                 {formatCurrency(
@@ -196,9 +196,9 @@ const Dashboard = () => {
         </div>
 
         <div className="rounded-3xl border border-white/80 bg-gradient-to-br from-white via-white to-ink-50 p-6 shadow-card">
-          <p className="text-sm font-semibold text-slate-500">
-            Activite rapide
-          </p>
+              <p className="text-sm font-semibold text-slate-500">
+                Activite rapide
+              </p>
           <div className="mt-6 space-y-4">
             {[
               {
