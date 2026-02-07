@@ -33,8 +33,11 @@ public class InvoiceController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<Invoice>> list(@RequestParam UUID ownerUserId, Pageable pageable) {
-        return ResponseEntity.ok(invoiceRepository.findByOwnerUserId(ownerUserId, pageable));
+    public ResponseEntity<Page<Invoice>> list(@RequestParam(required = false) UUID ownerUserId, Pageable pageable) {
+        if (ownerUserId != null) {
+            return ResponseEntity.ok(invoiceRepository.findByOwnerUserId(ownerUserId, pageable));
+        }
+        return ResponseEntity.ok(invoiceRepository.findAll(pageable));
     }
 
     @GetMapping("/{id}")

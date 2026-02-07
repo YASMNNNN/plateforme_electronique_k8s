@@ -1,0 +1,10 @@
+com/plateforme/electronique/notification/entity/NotificationPreference$NotificationPreferenceBuilder.class
+com/plateforme/electronique/notification/repository/NotificationPreferenceRepository.class
+com/plateforme/electronique/notification/entity/NotificationPreference.class
+com/plateforme/electronique/notification/dto/NotificationPreferenceDto.class
+com/plateforme/electronique/notification/exception/NotificationExceptionHandler.class
+com/plateforme/electronique/notification/NotificationServiceApplication.class
+com/plateforme/electronique/notification/controller/NotificationController.class
+com/plateforme/electronique/notification/service/NotificationPreferenceService.class
+com/plateforme/electronique/notification/service/EmailService.class
+com/plateforme/electronique/notification/dto/NotificationPreferenceDto$NotificationPreferenceDtoBuilder.class

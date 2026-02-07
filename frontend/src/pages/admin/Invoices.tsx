@@ -2,8 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getInvoices, Invoice, InvoiceStatus } from '../../api/gateway';
 
-const OWNER_USER_ID = '11111111-1111-1111-1111-111111111111';
-
 const statusStyles: Record<InvoiceStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
   VALIDATED: 'bg-amber-100 text-amber-700',
@@ -27,7 +25,6 @@ const Invoices = () => {
       setLoading(true);
       try {
         const response = await getInvoices({
-          ownerUserId: OWNER_USER_ID,
           page,
           size: 10,
         });

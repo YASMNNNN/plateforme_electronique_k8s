@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getInvoices, Invoice } from '../../api/gateway';
 
-const OWNER_USER_ID = '11111111-1111-1111-1111-111111111111';
-
 const Clients = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [error, setError] = useState('');
@@ -12,7 +10,6 @@ const Clients = () => {
     const load = async () => {
       try {
         const response = await getInvoices({
-          ownerUserId: OWNER_USER_ID,
           page: 0,
           size: 50,
         });

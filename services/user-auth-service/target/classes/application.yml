@@ -1,0 +1,26 @@
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: user-auth-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgresql}:${DB_PORT:5432}/${DB_NAME:user_auth_db}
+    username: ${DB_USER:plateforme_user}
+    password: ${DB_PASSWORD:plateforme_pass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:eureka-server}:${EUREKA_PORT:8761}/eureka/
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-this-secret-change-this-secret}
+    access-token-seconds: 3600

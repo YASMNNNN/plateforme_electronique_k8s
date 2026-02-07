@@ -1,9 +1,12 @@
 server:
-  port: ${PORT:8083}
+  port: ${PORT:8080}
 
 spring:
   application:
     name: payment-service
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgresql}:${DB_PORT:5432}/${DB_NAME:payment_db}
     username: ${DB_USER:plateforme_user}

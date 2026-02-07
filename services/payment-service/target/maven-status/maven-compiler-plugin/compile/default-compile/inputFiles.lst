@@ -1,0 +1,7 @@
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/config/SecurityConfig.java
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/controller/PaymentController.java
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/dto/PaymentRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/service/PaymentService.java
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/entity/Payment.java
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/PaymentServiceApplication.java
+/home/osboxes/plateforme_electronique_k8s/services/payment-service/src/main/java/com/plateforme/electronique/payment/repository/PaymentRepository.java

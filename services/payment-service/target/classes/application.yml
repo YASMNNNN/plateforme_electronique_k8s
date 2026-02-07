@@ -1,0 +1,25 @@
+server:
+  port: ${PORT:8083}
+
+spring:
+  application:
+    name: payment-service
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:postgresql}:${DB_PORT:5432}/${DB_NAME:payment_db}
+    username: ${DB_USER:plateforme_user}
+    password: ${DB_PASSWORD:plateforme_pass}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:eureka-server}:${EUREKA_PORT:8761}/eureka/

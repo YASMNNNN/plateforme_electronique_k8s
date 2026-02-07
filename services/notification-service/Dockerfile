@@ -1,5 +1,13 @@
+FROM maven:3.9.9-eclipse-temurin-21 AS build
+
+WORKDIR /app
+COPY pom.xml .
+COPY src src
+RUN mvn -DskipTests package
+
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
-EXPOSE 8080
-CMD ["sh", "-c", "echo 'notification-service placeholder container'; tail -f /dev/null"]
+COPY --from=build /app/target/*.jar /app/app.jar
+EXPOSE 8085
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

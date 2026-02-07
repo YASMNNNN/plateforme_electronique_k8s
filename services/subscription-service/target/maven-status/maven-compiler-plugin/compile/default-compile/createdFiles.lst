@@ -1,0 +1,9 @@
+com/plateforme/electronique/subscription/entity/Subscription$Status.class
+com/plateforme/electronique/subscription/SubscriptionServiceApplication.class
+com/plateforme/electronique/subscription/entity/Plan.class
+com/plateforme/electronique/subscription/entity/Subscription$SubscriptionBuilder.class
+com/plateforme/electronique/subscription/repository/PlanRepository.class
+com/plateforme/electronique/subscription/entity/Plan$Name.class
+com/plateforme/electronique/subscription/entity/Plan$PlanBuilder.class
+com/plateforme/electronique/subscription/entity/Subscription.class
+com/plateforme/electronique/subscription/repository/SubscriptionRepository.class

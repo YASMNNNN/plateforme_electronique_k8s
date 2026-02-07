@@ -1,0 +1,14 @@
+server:
+  port: ${PORT:8086}
+
+spring:
+  application:
+    name: signature-service
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:eureka-server}:${EUREKA_PORT:8761}/eureka/

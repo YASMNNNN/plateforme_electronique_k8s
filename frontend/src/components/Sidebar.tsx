@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import logo from '../assets/logo.jpg';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -39,11 +40,12 @@ const Sidebar = () => {
         </NavLink>
       </nav>
 
-      <div className="mt-10 rounded-2xl border border-white/70 bg-white/70 p-4 text-sm text-slate-600">
-        <p className="font-semibold text-slate-800">Conseil du jour</p>
-        <p className="mt-2">
-          Centralisez vos factures et paiements pour une visibilite instantanee sur votre tresorerie.
-        </p>
+      <div className="mt-10 flex justify-center rounded-2xl border border-white/70 bg-white/70 p-4">
+        <img
+          src={logo}
+          alt="Logo Plateforme Electronique"
+          className="max-h-24 w-auto object-contain"
+        />
       </div>
     </aside>
   );

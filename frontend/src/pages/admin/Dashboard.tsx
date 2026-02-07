@@ -7,8 +7,6 @@ import {
   Payment,
 } from '../../api/gateway';
 
-const OWNER_USER_ID = '11111111-1111-1111-1111-111111111111';
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('fr-FR', {
     style: 'currency',
@@ -36,7 +34,7 @@ const Dashboard = () => {
     const load = async () => {
       try {
         const [invoicesResponse, paymentsResponse] = await Promise.all([
-          getInvoices({ ownerUserId: OWNER_USER_ID, page: 0, size: 50 }),
+          getInvoices({ page: 0, size: 50 }),
           getPayments(),
         ]);
         if (!isMounted) return;
@@ -63,9 +61,9 @@ const Dashboard = () => {
   const stats = useMemo(() => {
     const totalInvoices = invoicePage?.totalElements ?? invoices.length;
     const totalPayments = payments.length;
-    const revenue = payments
-      .filter((payment) => payment.status === 'COMPLETED')
-      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    const revenue = invoices
+      .filter((invoice) => invoice.status === 'PAID')
+      .reduce((sum, invoice) => sum + (invoice.totalTtc || 0), 0);
     const uniqueClients = new Set(
       invoices.map((invoice) => invoice.clientEmail || invoice.clientName || '')
     ).size;
@@ -95,18 +93,18 @@ const Dashboard = () => {
       };
     });
 
-    payments.forEach((payment) => {
-      if (!payment.paymentDate) return;
-      const date = new Date(payment.paymentDate);
+    invoices.forEach((invoice) => {
+      if (invoice.status !== 'PAID' || !invoice.issueDate) return;
+      const date = new Date(invoice.issueDate);
       const key = `${date.getFullYear()}-${date.getMonth()}`;
       const target = months.find((month) => month.key === key);
       if (target) {
-        target.total += payment.amount || 0;
+        target.total += invoice.totalTtc || 0;
       }
     });
 
     return months;
-  }, [payments]);
+  }, [invoices]);
 
   const maxRevenue = Math.max(
     ...revenueSeries.map((point) => point.total),

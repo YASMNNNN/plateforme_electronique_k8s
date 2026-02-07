@@ -91,12 +91,14 @@ export const getInvoices = async ({
   page = 0,
   size = 10,
 }: {
-  ownerUserId: string;
+  ownerUserId?: string;
   page?: number;
   size?: number;
-}): Promise<InvoicePage> => {
+} = {}): Promise<InvoicePage> => {
   const url = new URL(`${API_BASE}/api/invoices`);
-  url.searchParams.set('ownerUserId', ownerUserId);
+  if (ownerUserId) {
+    url.searchParams.set('ownerUserId', ownerUserId);
+  }
   url.searchParams.set('page', String(page));
   url.searchParams.set('size', String(size));
   return parseJson<InvoicePage>(
@@ -131,4 +133,53 @@ export const createInvoice = async (
       body: JSON.stringify(payload),
     })
   );
+};
+
+// Notifications (paramètres)
+export type NotificationPreferences = {
+  email: string;
+  emailEnabled: boolean;
+  paymentAlertsEnabled: boolean;
+  invoiceAlertsEnabled: boolean;
+};
+
+export const getNotificationPreferences = async (): Promise<NotificationPreferences> => {
+  return parseJson<NotificationPreferences>(
+    await fetch(`${API_BASE}/api/notifications/preferences`, {
+      headers: getAuthHeaders(),
+    })
+  );
+};
+
+export const updateNotificationPreferences = async (
+  prefs: NotificationPreferences
+): Promise<NotificationPreferences> => {
+  return parseJson<NotificationPreferences>(
+    await fetch(`${API_BASE}/api/notifications/preferences`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(prefs),
+    })
+  );
+};
+
+export const sendTestNotificationEmail = async (email: string): Promise<void> => {
+  const response = await fetch(
+    `${API_BASE}/api/notifications/test-email?to=${encodeURIComponent(email)}`,
+    { method: 'POST', headers: getAuthHeaders() }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    let msg = text;
+    try {
+      const json = JSON.parse(text) as { message?: string; error?: string };
+      msg = json.message || json.error || text;
+    } catch {
+      // keep text as-is
+    }
+    throw new Error(msg || 'Erreur envoi email de test');
+  }
 };

@@ -32,6 +32,23 @@ const Payments = () => {
     };
   }, []);
 
+  const totalCompleted = payments
+    .filter((p) => p.status === 'COMPLETED')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const totalPending = payments
+    .filter((p) => p.status === 'PENDING')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const totalAll = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'TND',
+      maximumFractionDigits: 2,
+    }).format(value);
+
   return (
     <div className="space-y-6">
       {error ? (
@@ -47,6 +64,35 @@ const Payments = () => {
           Historique des paiements et statuts de transaction.
         </p>
       </div>
+
+      {!loading && payments.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-white/80 bg-white p-5 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-400">
+              Total general
+            </p>
+            <p className="mt-3 font-display text-2xl font-semibold text-ink-900">
+              {formatCurrency(totalAll)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white p-5 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-green-600">
+              Total confirme
+            </p>
+            <p className="mt-3 font-display text-2xl font-semibold text-green-700">
+              {formatCurrency(totalCompleted)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/80 bg-white p-5 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">
+              Total en attente
+            </p>
+            <p className="mt-3 font-display text-2xl font-semibold text-amber-700">
+              {formatCurrency(totalPending)}
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-3xl border border-white/80 bg-white shadow-card">
         <table className="w-full text-left text-sm">

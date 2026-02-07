@@ -21,6 +21,10 @@ spring:
           uri: lb://invoice-service
           predicates:
             - Path=/api/clients/**
+        - id: notification-service
+          uri: lb://notification-service
+          predicates:
+            - Path=/api/notifications/**
       globalcors:
         corsConfigurations:
           '[/**]':

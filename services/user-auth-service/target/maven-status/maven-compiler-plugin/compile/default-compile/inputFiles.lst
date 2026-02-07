@@ -1,0 +1,16 @@
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/UserAuthServiceApplication.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/dto/LoginRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/repository/RefreshTokenRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/config/SecurityConfig.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/dto/LogoutRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/security/JwtAuthenticationFilter.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/dto/RegisterRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/dto/UserProfileResponse.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/dto/AuthResponse.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/repository/UserRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/entity/RefreshToken.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/entity/User.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/controller/AuthController.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/dto/RefreshRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/security/JwtService.java
+/home/osboxes/plateforme_electronique_k8s/services/user-auth-service/src/main/java/com/plateforme/electronique/auth/service/AuthService.java

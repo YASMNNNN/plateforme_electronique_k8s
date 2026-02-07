@@ -194,8 +194,8 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_MAIL_HOST: smtp.gmail.com
       SPRING_MAIL_PORT: 587
-      SPRING_MAIL_USERNAME: your-email@gmail.com
-      SPRING_MAIL_PASSWORD: your-app-password
+      SPRING_MAIL_USERNAME: yasminegr432@gmail.com
+      SPRING_MAIL_PASSWORD: ${MAIL_APP_PASSWORD:-your-app-password}
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
       SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
     networks:
@@ -245,7 +245,7 @@ services:
       REACT_APP_KEYCLOAK_REALM: plateforme-electronique
       REACT_APP_KEYCLOAK_CLIENT_ID: plateforme-frontend
     ports:
-      - "3001:80"
+      - "3000:80"
     networks:
       - plateforme-network
     depends_on:

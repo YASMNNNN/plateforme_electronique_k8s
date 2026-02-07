@@ -1,0 +1,8 @@
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/controller/NotificationController.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/NotificationServiceApplication.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/dto/NotificationPreferenceDto.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/service/EmailService.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/repository/NotificationPreferenceRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/service/NotificationPreferenceService.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/entity/NotificationPreference.java
+/home/osboxes/plateforme_electronique_k8s/services/notification-service/src/main/java/com/plateforme/electronique/notification/exception/NotificationExceptionHandler.java

@@ -1,0 +1,5 @@
+/home/osboxes/plateforme_electronique_k8s/services/subscription-service/src/main/java/com/plateforme/electronique/subscription/repository/SubscriptionRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/subscription-service/src/main/java/com/plateforme/electronique/subscription/repository/PlanRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/subscription-service/src/main/java/com/plateforme/electronique/subscription/entity/Plan.java
+/home/osboxes/plateforme_electronique_k8s/services/subscription-service/src/main/java/com/plateforme/electronique/subscription/entity/Subscription.java
+/home/osboxes/plateforme_electronique_k8s/services/subscription-service/src/main/java/com/plateforme/electronique/subscription/SubscriptionServiceApplication.java

@@ -1,0 +1,5 @@
+timestamp:2026-02-07T12:23:37.013+00:00,status:500,error:Internal Server Error,path:/api/notifications/test-email}
+
+cd services/notification-service && mvn -DskipTests package && docker build -t plateforme-notification:latest .
+
+{"timestamp":"2026-02-07T15:07:38.973+00:00","path":"/api/notifications/test-email","status":500,"error":"Internal Server Error","requestId":"e5c4b9ac-65"}

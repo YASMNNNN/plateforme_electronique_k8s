@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: invoice-service
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgresql}:${DB_PORT:5432}/${DB_NAME:invoice_db}
     username: ${DB_USER:plateforme_user}
