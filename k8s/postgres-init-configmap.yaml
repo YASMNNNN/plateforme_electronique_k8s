@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-init-scripts
+  namespace: plateforme-electronique
 data:
   01-create-databases.sh: |
     #!/bin/bash

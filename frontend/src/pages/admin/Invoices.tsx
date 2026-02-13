@@ -1,6 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getInvoices, Invoice, InvoiceStatus } from '../../api/gateway';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  getInvoices,
+  deleteInvoice,
+  validateInvoice,
+  sendInvoice,
+  cancelInvoice,
+  downloadInvoicePdf,
+  Invoice,
+  InvoiceStatus,
+} from '../../api/gateway';
 
 const statusStyles: Record<InvoiceStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
@@ -10,7 +19,38 @@ const statusStyles: Record<InvoiceStatus, string> = {
   CANCELLED: 'bg-rose-100 text-rose-700',
 };
 
+type ConfirmModalProps = {
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+const ConfirmModal = ({ message, onConfirm, onCancel }: ConfirmModalProps) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="w-full max-w-sm rounded-3xl border border-white/80 bg-white p-6 shadow-card">
+      <p className="mb-6 text-sm text-slate-700">{message}</p>
+      <div className="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Confirmer
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const Invoices = () => {
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(0);
@@ -18,16 +58,33 @@ const Invoices = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmAction, setConfirmAction] = useState<{
+    message: string;
+    action: () => Promise<void>;
+  } | null>(null);
+
+  const loadInvoices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await getInvoices({ page, size: 10 });
+      setInvoices(response.content);
+      setTotalPages(response.totalPages || 1);
+      setError('');
+    } catch {
+      setInvoices([]);
+      setTotalPages(1);
+      setError("Impossible de charger les factures via l'API Gateway.");
+    } finally {
+      setLoading(false);
+    }
+  }, [page]);
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        const response = await getInvoices({
-          page,
-          size: 10,
-        });
+        const response = await getInvoices({ page, size: 10 });
         if (!isMounted) return;
         setInvoices(response.content);
         setTotalPages(response.totalPages || 1);
@@ -36,9 +93,7 @@ const Invoices = () => {
         if (!isMounted) return;
         setInvoices([]);
         setTotalPages(1);
-        setError(
-          "Impossible de charger les factures via l'API Gateway."
-        );
+        setError("Impossible de charger les factures via l'API Gateway.");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -48,6 +103,21 @@ const Invoices = () => {
       isMounted = false;
     };
   }, [page]);
+
+  const runAction = async (action: () => Promise<void>) => {
+    try {
+      await action();
+      await loadInvoices();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de l\'action.');
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAction) return;
+    await runAction(confirmAction.action);
+    setConfirmAction(null);
+  };
 
   const filteredInvoices = useMemo(() => {
     return invoices.filter((invoice) => {
@@ -65,6 +135,14 @@ const Invoices = () => {
 
   return (
     <div className="space-y-6">
+      {confirmAction && (
+        <ConfirmModal
+          message={confirmAction.message}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+
       {error ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           {error}
@@ -122,13 +200,19 @@ const Invoices = () => {
               <th className="px-6 py-4">Montant</th>
               <th className="px-6 py-4">Statut</th>
               <th className="px-6 py-4">Emission</th>
+              <th className="px-6 py-4">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredInvoices.map((invoice) => (
               <tr key={invoice.id} className="border-t border-slate-100">
                 <td className="px-6 py-4 font-semibold text-slate-700">
-                  {invoice.invoiceNumber || 'DRAFT'}
+                  <Link
+                    to={`/admin/invoices/${invoice.id}`}
+                    className="hover:text-ink-500 hover:underline"
+                  >
+                    {invoice.invoiceNumber || 'DRAFT'}
+                  </Link>
                 </td>
                 <td className="px-6 py-4">
                   <div className="font-semibold text-slate-800">
@@ -158,13 +242,119 @@ const Invoices = () => {
                     ? new Date(invoice.issueDate).toLocaleDateString('fr-FR')
                     : '-'}
                 </td>
+                <td className="px-6 py-4">
+                  <div className="flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/admin/invoices/${invoice.id}`)}
+                      className="rounded-xl px-2 py-1 text-xs font-semibold text-ink-500 hover:bg-ink-50"
+                    >
+                      Voir
+                    </button>
+
+                    {invoice.status === 'DRAFT' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(`/admin/invoices/${invoice.id}/edit`)
+                          }
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            runAction(() => validateInvoice(invoice.id).then(() => {}))
+                          }
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50"
+                        >
+                          Valider
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmAction({
+                              message: `Supprimer la facture ${invoice.invoiceNumber || 'brouillon'} ?`,
+                              action: () => deleteInvoice(invoice.id),
+                            })
+                          }
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                        >
+                          Supprimer
+                        </button>
+                      </>
+                    )}
+
+                    {invoice.status === 'VALIDATED' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            runAction(() => sendInvoice(invoice.id).then(() => {}))
+                          }
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                        >
+                          Envoyer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmAction({
+                              message: `Annuler la facture ${invoice.invoiceNumber} ?`,
+                              action: () => cancelInvoice(invoice.id).then(() => {}),
+                            })
+                          }
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    )}
+
+                    {invoice.status === 'SENT' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => downloadInvoicePdf(invoice.id)}
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                        >
+                          PDF
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setConfirmAction({
+                              message: `Annuler la facture ${invoice.invoiceNumber} ?`,
+                              action: () => cancelInvoice(invoice.id).then(() => {}),
+                            })
+                          }
+                          className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    )}
+
+                    {invoice.status === 'PAID' && (
+                      <button
+                        type="button"
+                        onClick={() => downloadInvoicePdf(invoice.id)}
+                        className="rounded-xl px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                      >
+                        PDF
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
             {!loading && filteredInvoices.length === 0 ? (
               <tr>
                 <td
                   className="px-6 py-6 text-center text-sm text-slate-400"
-                  colSpan={5}
+                  colSpan={6}
                 >
                   Aucune facture ne correspond aux filtres.
                 </td>

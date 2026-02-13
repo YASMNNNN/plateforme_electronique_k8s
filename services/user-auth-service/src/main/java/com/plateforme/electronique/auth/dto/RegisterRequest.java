@@ -24,6 +24,6 @@ public class RegisterRequest {
     private String companyName;
     private String taxId;
 
-    @Pattern(regexp = "ADMIN|USER|ACCOUNTANT")
+    @Pattern(regexp = "ADMIN|USER|ACCOUNTANT|MERCHANT")
     private String role = "USER";
 }

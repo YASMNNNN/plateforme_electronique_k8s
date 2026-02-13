@@ -104,7 +104,7 @@ services:
   invoice-service:
     build:
       context: ./services/invoice-service
-        # container_name: plateforme-invoice  # SUPPRIMÉ
+    # container_name: plateforme-invoice  # SUPPRIMÉ
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/

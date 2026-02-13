@@ -9,6 +9,10 @@ spring:
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       routes:
+        - id: auth-service
+          uri: lb://user-auth-service
+          predicates:
+            - Path=/api/auth/**,/api/users/**,/api/merchants/**
         - id: invoice-service
           uri: lb://invoice-service
           predicates:
@@ -17,6 +21,14 @@ spring:
           uri: lb://payment-service
           predicates:
             - Path=/api/payments/**
+        - id: card-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/cards/**
+        - id: subscription-service
+          uri: lb://subscription-service
+          predicates:
+            - Path=/api/subscriptions/**,/api/plans/**
         - id: client-service
           uri: lb://invoice-service
           predicates:

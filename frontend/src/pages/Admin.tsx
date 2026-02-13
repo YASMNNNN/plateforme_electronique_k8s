@@ -2,12 +2,17 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import Sidebar from '../components/Sidebar';
+import Cards from './admin/Cards';
 import Clients from './admin/Clients';
 import Dashboard from './admin/Dashboard';
 import InvoiceCreate from './admin/InvoiceCreate';
+import InvoiceDetail from './admin/InvoiceDetail';
+import InvoiceEdit from './admin/InvoiceEdit';
 import Invoices from './admin/Invoices';
 import Payments from './admin/Payments';
+import Profile from './admin/Profile';
 import Settings from './admin/Settings';
+import Subscriptions from './admin/Subscriptions';
 
 const Admin = () => {
   return (
@@ -21,8 +26,13 @@ const Admin = () => {
               <Route index element={<Dashboard />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/new" element={<InvoiceCreate />} />
+              <Route path="invoices/:id" element={<InvoiceDetail />} />
+              <Route path="invoices/:id/edit" element={<InvoiceEdit />} />
               <Route path="clients" element={<Clients />} />
               <Route path="payments" element={<Payments />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="subscriptions" element={<Subscriptions />} />
+              <Route path="cards" element={<Cards />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>

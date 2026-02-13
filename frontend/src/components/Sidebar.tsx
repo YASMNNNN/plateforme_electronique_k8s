@@ -35,6 +35,15 @@ const Sidebar = () => {
         <NavLink to="/admin/payments" className={navLinkClass}>
           Paiements
         </NavLink>
+        <NavLink to="/admin/profile" className={navLinkClass}>
+          Mon profil
+        </NavLink>
+        <NavLink to="/admin/subscriptions" className={navLinkClass}>
+          Abonnements
+        </NavLink>
+        <NavLink to="/admin/cards" className={navLinkClass}>
+          Cartes
+        </NavLink>
         <NavLink to="/admin/settings" className={navLinkClass}>
           Parametres
         </NavLink>

@@ -1,6 +1,7 @@
 package com.plateforme.electronique.invoice.service;
 
 import com.plateforme.electronique.invoice.dto.CreateInvoiceRequest;
+import com.plateforme.electronique.invoice.dto.MerchantInvoiceStatsResponse;
 import com.plateforme.electronique.invoice.entity.Invoice;
 import com.plateforme.electronique.invoice.entity.InvoiceItem;
 import com.plateforme.electronique.invoice.repository.InvoiceRepository;
@@ -115,6 +116,28 @@ public class InvoiceService {
             throw new IllegalStateException("Only drafts can be deleted");
         }
         invoiceRepository.delete(invoice);
+    }
+
+    public Invoice updateStatus(UUID invoiceId, Invoice.Status newStatus) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        if (newStatus == Invoice.Status.VALIDATED && invoice.getInvoiceNumber() == null) {
+            invoice.setInvoiceNumber(generateInvoiceNumber());
+        }
+        invoice.setStatus(newStatus);
+        invoice.setUpdatedAt(LocalDateTime.now());
+        return invoiceRepository.save(invoice);
+    }
+
+    public MerchantInvoiceStatsResponse getStatsByOwner(UUID ownerUserId) {
+        return MerchantInvoiceStatsResponse.builder()
+                .ownerUserId(ownerUserId)
+                .totalInvoices(invoiceRepository.countByOwnerUserId(ownerUserId))
+                .paidInvoices(invoiceRepository.countByOwnerUserIdAndStatus(ownerUserId, Invoice.Status.PAID))
+                .draftInvoices(invoiceRepository.countByOwnerUserIdAndStatus(ownerUserId, Invoice.Status.DRAFT))
+                .sentInvoices(invoiceRepository.countByOwnerUserIdAndStatus(ownerUserId, Invoice.Status.SENT))
+                .totalRevenue(invoiceRepository.sumPaidTotalByOwner(ownerUserId))
+                .build();
     }
 
     private void computeTotals(Invoice invoice) {

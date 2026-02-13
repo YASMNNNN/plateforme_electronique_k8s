@@ -1,6 +1,8 @@
 package com.plateforme.electronique.invoice.controller;
 
 import com.plateforme.electronique.invoice.dto.CreateInvoiceRequest;
+import com.plateforme.electronique.invoice.dto.InvoiceStatusUpdateRequest;
+import com.plateforme.electronique.invoice.dto.MerchantInvoiceStatsResponse;
 import com.plateforme.electronique.invoice.entity.Invoice;
 import com.plateforme.electronique.invoice.repository.InvoiceRepository;
 import com.plateforme.electronique.invoice.service.InvoiceService;
@@ -33,16 +35,29 @@ public class InvoiceController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<Invoice>> list(@RequestParam(required = false) UUID ownerUserId, Pageable pageable) {
+    public ResponseEntity<Page<Invoice>> list(
+            @RequestParam(required = false) UUID ownerUserId,
+            @RequestParam(required = false) Invoice.Status status,
+            Pageable pageable) {
+        if (ownerUserId != null && status != null) {
+            return ResponseEntity.ok(invoiceRepository.findByOwnerUserIdAndStatus(ownerUserId, status, pageable));
+        }
         if (ownerUserId != null) {
             return ResponseEntity.ok(invoiceRepository.findByOwnerUserId(ownerUserId, pageable));
+        }
+        if (status != null) {
+            return ResponseEntity.ok(invoiceRepository.findByStatus(status, pageable));
         }
         return ResponseEntity.ok(invoiceRepository.findAll(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Invoice> detail(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
-        return ResponseEntity.of(invoiceRepository.findByIdAndOwnerUserId(id, ownerUserId));
+    public ResponseEntity<Invoice> detail(@PathVariable UUID id,
+                                          @RequestParam(required = false) UUID ownerUserId) {
+        if (ownerUserId != null) {
+            return ResponseEntity.of(invoiceRepository.findByIdAndOwnerUserId(id, ownerUserId));
+        }
+        return ResponseEntity.of(invoiceRepository.findById(id));
     }
 
     @PutMapping("/{id}")
@@ -71,6 +86,17 @@ public class InvoiceController {
     @PostMapping("/{id}/cancel")
     public ResponseEntity<Invoice> cancel(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
         return ResponseEntity.ok(invoiceService.cancelInvoice(id, ownerUserId));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Invoice> updateStatus(@PathVariable UUID id,
+                                                @Valid @RequestBody InvoiceStatusUpdateRequest request) {
+        return ResponseEntity.ok(invoiceService.updateStatus(id, request.getStatus()));
+    }
+
+    @GetMapping("/stats/{ownerUserId}")
+    public ResponseEntity<MerchantInvoiceStatsResponse> stats(@PathVariable UUID ownerUserId) {
+        return ResponseEntity.ok(invoiceService.getStatsByOwner(ownerUserId));
     }
 
     @GetMapping("/{id}/pdf")
