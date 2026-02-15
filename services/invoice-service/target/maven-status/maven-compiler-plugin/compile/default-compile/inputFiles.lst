@@ -1,10 +1,13 @@
 /home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/entity/Invoice.java
 /home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/entity/Product.java
-/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/dto/CreateInvoiceItemRequest.java
-/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/entity/Address.java
-/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/repository/InvoiceRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/dto/MerchantInvoiceStatsResponse.java
 /home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/service/InvoiceService.java
 /home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/dto/CreateInvoiceRequest.java
 /home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/controller/InvoiceController.java
-/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/entity/InvoiceItem.java
 /home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/InvoiceServiceApplication.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/dto/CreateInvoiceItemRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/entity/Address.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/service/InvoicePdfService.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/repository/InvoiceRepository.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/dto/InvoiceStatusUpdateRequest.java
+/home/osboxes/plateforme_electronique_k8s/services/invoice-service/src/main/java/com/plateforme/electronique/invoice/entity/InvoiceItem.java

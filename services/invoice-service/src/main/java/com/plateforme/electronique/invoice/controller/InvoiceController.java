@@ -14,7 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -23,10 +22,14 @@ public class InvoiceController {
 
     private final InvoiceService invoiceService;
     private final InvoiceRepository invoiceRepository;
+    private final com.plateforme.electronique.invoice.service.InvoicePdfService invoicePdfService;
 
-    public InvoiceController(InvoiceService invoiceService, InvoiceRepository invoiceRepository) {
+    public InvoiceController(InvoiceService invoiceService,
+                             InvoiceRepository invoiceRepository,
+                             com.plateforme.electronique.invoice.service.InvoicePdfService invoicePdfService) {
         this.invoiceService = invoiceService;
         this.invoiceRepository = invoiceRepository;
+        this.invoicePdfService = invoicePdfService;
     }
 
     @PostMapping
@@ -103,10 +106,13 @@ public class InvoiceController {
     public ResponseEntity<byte[]> pdf(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
         Invoice invoice = invoiceRepository.findByIdAndOwnerUserId(id, ownerUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
-        String content = "PDF placeholder for invoice " + invoice.getInvoiceNumber();
+        byte[] pdfBytes = invoicePdfService.generate(invoice);
+        String filename = invoice.getInvoiceNumber() != null
+                ? "facture-" + invoice.getInvoiceNumber() + ".pdf"
+                : "facture-" + id + ".pdf";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=invoice.pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_PDF)
-                .body(content.getBytes(StandardCharsets.UTF_8));
+                .body(pdfBytes);
     }
 }

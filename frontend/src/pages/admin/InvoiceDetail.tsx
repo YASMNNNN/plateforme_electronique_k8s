@@ -276,6 +276,15 @@ const InvoiceDetail = () => {
               Telecharger PDF
             </button>
           )}
+          {invoice.status === 'CANCELLED' && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Supprimer
+            </button>
+          )}
           <Link
             to="/admin/invoices"
             className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"

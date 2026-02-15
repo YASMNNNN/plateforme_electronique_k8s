@@ -1,12 +1,17 @@
 com/plateforme/electronique/invoice/entity/InvoiceItem.class
+com/plateforme/electronique/invoice/dto/InvoiceStatusUpdateRequest.class
 com/plateforme/electronique/invoice/entity/Invoice$Status.class
 com/plateforme/electronique/invoice/entity/InvoiceItem$InvoiceItemBuilder.class
 com/plateforme/electronique/invoice/entity/Product$ProductBuilder.class
+com/plateforme/electronique/invoice/service/InvoicePdfService.class
 com/plateforme/electronique/invoice/controller/InvoiceController.class
+com/plateforme/electronique/invoice/service/InvoicePdfService$1.class
 com/plateforme/electronique/invoice/dto/CreateInvoiceItemRequest.class
+com/plateforme/electronique/invoice/dto/MerchantInvoiceStatsResponse.class
 com/plateforme/electronique/invoice/service/InvoiceService.class
 com/plateforme/electronique/invoice/entity/Product.class
 com/plateforme/electronique/invoice/entity/Address$AddressBuilder.class
+com/plateforme/electronique/invoice/dto/MerchantInvoiceStatsResponse$MerchantInvoiceStatsResponseBuilder.class
 com/plateforme/electronique/invoice/entity/Invoice$InvoiceBuilder.class
 com/plateforme/electronique/invoice/entity/Invoice.class
 com/plateforme/electronique/invoice/dto/CreateInvoiceRequest.class

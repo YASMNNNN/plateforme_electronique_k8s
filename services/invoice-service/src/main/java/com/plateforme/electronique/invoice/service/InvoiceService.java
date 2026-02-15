@@ -112,8 +112,8 @@ public class InvoiceService {
     public void deleteDraft(UUID invoiceId, UUID ownerId) {
         Invoice invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
                 .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
-        if (invoice.getStatus() != Invoice.Status.DRAFT) {
-            throw new IllegalStateException("Only drafts can be deleted");
+        if (invoice.getStatus() != Invoice.Status.DRAFT && invoice.getStatus() != Invoice.Status.CANCELLED) {
+            throw new IllegalStateException("Only drafts and cancelled invoices can be deleted");
         }
         invoiceRepository.delete(invoice);
     }

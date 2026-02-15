@@ -346,6 +346,21 @@ const Invoices = () => {
                         PDF
                       </button>
                     )}
+
+                    {invoice.status === 'CANCELLED' && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirmAction({
+                            message: `Supprimer definitivement la facture ${invoice.invoiceNumber || 'annulee'} ?`,
+                            action: () => deleteInvoice(invoice.id),
+                          })
+                        }
+                        className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                      >
+                        Supprimer
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

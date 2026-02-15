@@ -197,10 +197,17 @@ export const downloadInvoicePdf = async (id: string): Promise<void> => {
     throw new Error('Erreur lors du telechargement du PDF');
   }
   const blob = await response.blob();
+  // Extract filename from Content-Disposition header if available
+  const disposition = response.headers.get('Content-Disposition');
+  let filename = `facture-${id}.pdf`;
+  if (disposition) {
+    const match = disposition.match(/filename="?([^";\n]+)"?/);
+    if (match?.[1]) filename = match[1];
+  }
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `facture-${id}.pdf`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
