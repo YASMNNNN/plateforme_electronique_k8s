@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getCurrentUser } from '../api/gateway';
+import type { UserProfile } from '../api/gateway';
 
 const titleMap: Record<string, string> = {
   '/admin': 'Tableau de bord',
@@ -7,21 +9,34 @@ const titleMap: Record<string, string> = {
   '/admin/invoices/new': 'Nouvelle facture',
   '/admin/clients': 'Clients',
   '/admin/payments': 'Paiements',
+  '/admin/users': 'Gestion des utilisateurs',
   '/admin/settings': 'Parametres',
 };
 
 const AdminHeader = () => {
   const [open, setOpen] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    getCurrentUser().then(setUser).catch(() => {});
+  }, []);
 
   const title = useMemo(
     () => titleMap[location.pathname] || 'Tableau de bord',
     [location.pathname]
   );
 
+  const fullName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() : '';
+  const initials = user
+    ? `${(user.firstName ?? '')[0] ?? ''}${(user.lastName ?? '')[0] ?? ''}`.toUpperCase()
+    : '';
+
   const handleLogout = () => {
     localStorage.removeItem('demo_auth');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     navigate('/login');
   };
 
@@ -43,11 +58,11 @@ const AdminHeader = () => {
           className="flex items-center gap-3 rounded-2xl border border-white/80 bg-white px-4 py-3 text-left shadow-card"
         >
           <div className="grid h-10 w-10 place-items-center rounded-full bg-ink-500 text-sm font-semibold text-white">
-            AD
+            {initials || '??'}
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">
-              Amel Dabbabi
+              {fullName || 'Chargement...'}
             </p>
             <p className="text-xs text-slate-500">Administrateur</p>
           </div>

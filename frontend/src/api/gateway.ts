@@ -1,4 +1,5 @@
 import type {
+  AuthResponse,
   Card,
   CardPayload,
   CreateSubscriptionPayload,
@@ -7,26 +8,32 @@ import type {
   InvoicePage,
   InvoicePayload,
   InvoiceStatus,
+  LoginPayload,
   MerchantInvoiceStats,
   Notification,
   NotificationPreferences,
   Payment,
   Plan,
+  RegisterPayload,
   Subscription,
   UpdateUserPayload,
+  UserPage,
   UserProfile,
 } from './types';
 
 export type {
+  AuthResponse,
   InvoiceStatus,
   InvoiceItem,
   InvoiceItemPayload,
   InvoicePayload,
   Invoice,
   InvoicePage,
+  LoginPayload,
   PaymentStatus,
   Payment,
   NotificationPreferences,
+  RegisterPayload,
   UserProfile,
   UpdateUserPayload,
   UserPage,
@@ -86,6 +93,24 @@ async function apiFetch<T>(
   }
   return response.json() as Promise<T>;
 }
+
+/* ── Auth ── */
+
+export const loginUser = async (payload: LoginPayload): Promise<AuthResponse> => {
+  return apiFetch<AuthResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const registerUser = async (payload: RegisterPayload): Promise<AuthResponse> => {
+  return apiFetch<AuthResponse>('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+/* ── Invoices ── */
 
 export const getInvoices = async ({
   ownerUserId,
@@ -232,6 +257,13 @@ export const updateUser = async (
 
 export const deleteUser = async (id: string): Promise<void> => {
   return apiFetch<void>(`/api/users/${id}`, { method: 'DELETE' });
+};
+
+export const getUsers = async ({
+  page = 0,
+  size = 20,
+}: { page?: number; size?: number } = {}): Promise<UserPage> => {
+  return apiFetch<UserPage>(`/api/users?page=${page}&size=${size}`);
 };
 
 /* ── Cards ── */

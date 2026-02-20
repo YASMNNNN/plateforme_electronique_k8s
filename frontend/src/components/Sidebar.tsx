@@ -38,6 +38,9 @@ const Sidebar = () => {
         <NavLink to="/admin/profile" className={navLinkClass}>
           Mon profil
         </NavLink>
+        <NavLink to="/admin/users" className={navLinkClass}>
+          Utilisateurs
+        </NavLink>
         <NavLink to="/admin/subscriptions" className={navLinkClass}>
           Abonnements
         </NavLink>

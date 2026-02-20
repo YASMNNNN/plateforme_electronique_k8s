@@ -13,6 +13,7 @@ import Payments from './admin/Payments';
 import Profile from './admin/Profile';
 import Settings from './admin/Settings';
 import Subscriptions from './admin/Subscriptions';
+import Users from './admin/Users';
 
 const Admin = () => {
   return (
@@ -31,6 +32,7 @@ const Admin = () => {
               <Route path="clients" element={<Clients />} />
               <Route path="payments" element={<Payments />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="users" element={<Users />} />
               <Route path="subscriptions" element={<Subscriptions />} />
               <Route path="cards" element={<Cards />} />
               <Route path="settings" element={<Settings />} />
