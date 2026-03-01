@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
+import RoleGuard from '../components/RoleGuard';
 import Sidebar from '../components/Sidebar';
 import Cards from './admin/Cards';
 import Clients from './admin/Clients';
@@ -32,10 +33,10 @@ const Admin = () => {
               <Route path="clients" element={<Clients />} />
               <Route path="payments" element={<Payments />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="users" element={<Users />} />
-              <Route path="subscriptions" element={<Subscriptions />} />
-              <Route path="cards" element={<Cards />} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="users" element={<RoleGuard roles={['ADMIN']}><Users /></RoleGuard>} />
+              <Route path="subscriptions" element={<RoleGuard roles={['ADMIN']}><Subscriptions /></RoleGuard>} />
+              <Route path="cards" element={<RoleGuard roles={['ADMIN']}><Cards /></RoleGuard>} />
+              <Route path="settings" element={<RoleGuard roles={['ADMIN']}><Settings /></RoleGuard>} />
               <Route path="*" element={<Navigate to="/admin" replace />} />
             </Routes>
           </main>

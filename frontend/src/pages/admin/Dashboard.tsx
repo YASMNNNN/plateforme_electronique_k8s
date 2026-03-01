@@ -6,6 +6,8 @@ import {
   InvoicePage,
   Payment,
 } from '../../api/gateway';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePermission } from '../../hooks/usePermission';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('fr-FR', {
@@ -28,13 +30,22 @@ const Dashboard = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { user } = useAuth();
+  const { can, isAdmin, userId } = usePermission();
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       try {
+        const invoiceParams: { ownerUserId?: string; page?: number; size?: number } = {
+          page: 0,
+          size: 50,
+        };
+        if (!isAdmin && userId) {
+          invoiceParams.ownerUserId = userId;
+        }
         const [invoicesResponse, paymentsResponse] = await Promise.all([
-          getInvoices({ page: 0, size: 50 }),
+          getInvoices(invoiceParams),
           getPayments(),
         ]);
         if (!isMounted) return;
@@ -54,7 +65,7 @@ const Dashboard = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAdmin, userId]);
 
   const invoices = invoicePage?.content ?? [];
 

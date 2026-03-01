@@ -80,6 +80,30 @@ export type NotificationPreferences = {
   invoiceAlertsEnabled: boolean;
 };
 
+/* ── Auth ── */
+
+export type AuthResponse = {
+  accessToken: string;
+  refreshToken: string;
+  expiresInSeconds: number;
+};
+
+export type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+export type RegisterPayload = {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  companyName?: string;
+  taxId?: string;
+  role?: string;
+};
+
 /* ── User / Profile ── */
 
 export type UserProfile = {
@@ -193,6 +217,13 @@ export type CreateNotificationRequest = {
   type?: string;
   title: string;
   message?: string;
+};
+
+/* ── Change Password ── */
+
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
 };
 
 /* ── Merchant Invoice Stats ── */

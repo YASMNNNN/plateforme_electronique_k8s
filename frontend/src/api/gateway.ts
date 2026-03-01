@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   Card,
   CardPayload,
+  ChangePasswordPayload,
   CreateSubscriptionPayload,
   Invoice,
   InvoiceItem,
@@ -23,6 +24,7 @@ import type {
 
 export type {
   AuthResponse,
+  ChangePasswordPayload,
   InvoiceStatus,
   InvoiceItem,
   InvoiceItemPayload,
@@ -110,6 +112,13 @@ export const registerUser = async (payload: RegisterPayload): Promise<AuthRespon
   });
 };
 
+export const adminCreateUser = async (payload: RegisterPayload): Promise<UserProfile> => {
+  return apiFetch<UserProfile>('/api/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
 /* ── Invoices ── */
 
 export const getInvoices = async ({
@@ -168,8 +177,6 @@ export const sendTestNotificationEmail = async (email: string): Promise<void> =>
   );
 };
 
-const OWNER_USER_ID = '11111111-1111-1111-1111-111111111111';
-
 export const getInvoice = async (id: string, ownerUserId?: string): Promise<Invoice> => {
   const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
   return apiFetch<Invoice>(`/api/invoices/${id}${params}`);
@@ -177,52 +184,65 @@ export const getInvoice = async (id: string, ownerUserId?: string): Promise<Invo
 
 export const updateInvoice = async (
   id: string,
-  payload: InvoicePayload
+  payload: InvoicePayload,
+  ownerUserId?: string
 ): Promise<Invoice> => {
-  return apiFetch<Invoice>(`/api/invoices/${id}?ownerUserId=${OWNER_USER_ID}`, {
+  const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
+  return apiFetch<Invoice>(`/api/invoices/${id}${params}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
 };
 
-export const deleteInvoice = async (id: string): Promise<void> => {
-  return apiFetch<void>(`/api/invoices/${id}?ownerUserId=${OWNER_USER_ID}`, {
+export const deleteInvoice = async (id: string, ownerUserId?: string): Promise<void> => {
+  const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
+  return apiFetch<void>(`/api/invoices/${id}${params}`, {
     method: 'DELETE',
   });
 };
 
-export const validateInvoice = async (id: string): Promise<Invoice> => {
+export const validateInvoice = async (id: string, ownerUserId?: string): Promise<Invoice> => {
+  const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
   return apiFetch<Invoice>(
-    `/api/invoices/${id}/validate?ownerUserId=${OWNER_USER_ID}`,
+    `/api/invoices/${id}/validate${params}`,
     { method: 'POST' }
   );
 };
 
-export const sendInvoice = async (id: string): Promise<Invoice> => {
+export const sendInvoice = async (id: string, ownerUserId?: string): Promise<Invoice> => {
+  const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
   return apiFetch<Invoice>(
-    `/api/invoices/${id}/send?ownerUserId=${OWNER_USER_ID}`,
+    `/api/invoices/${id}/send${params}`,
     { method: 'POST' }
   );
 };
 
-export const cancelInvoice = async (id: string): Promise<Invoice> => {
+export const cancelInvoice = async (id: string, ownerUserId?: string): Promise<Invoice> => {
+  const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
   return apiFetch<Invoice>(
-    `/api/invoices/${id}/cancel?ownerUserId=${OWNER_USER_ID}`,
+    `/api/invoices/${id}/cancel${params}`,
     { method: 'POST' }
   );
 };
 
-export const downloadInvoicePdf = async (id: string): Promise<void> => {
+export const markInvoicePaid = async (id: string): Promise<Invoice> => {
+  return apiFetch<Invoice>(`/api/invoices/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'PAID' }),
+  });
+};
+
+export const downloadInvoicePdf = async (id: string, ownerUserId?: string): Promise<void> => {
   const headers = getAuthHeaders();
+  const params = ownerUserId ? `?ownerUserId=${ownerUserId}` : '';
   const response = await fetch(
-    `${API_BASE}/api/invoices/${id}/pdf?ownerUserId=${OWNER_USER_ID}`,
+    `${API_BASE}/api/invoices/${id}/pdf${params}`,
     { headers }
   );
   if (!response.ok) {
     throw new Error('Erreur lors du telechargement du PDF');
   }
   const blob = await response.blob();
-  // Extract filename from Content-Disposition header if available
   const disposition = response.headers.get('Content-Disposition');
   let filename = `facture-${id}.pdf`;
   if (disposition) {
@@ -340,4 +360,15 @@ export const getMerchantStats = async (
   return apiFetch<MerchantInvoiceStats>(
     `/api/invoices/stats/${ownerUserId}`
   );
+};
+
+/* ── Password ── */
+
+export const changePassword = async (
+  payload: ChangePasswordPayload
+): Promise<void> => {
+  return apiFetch<void>('/api/users/me/password', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 };

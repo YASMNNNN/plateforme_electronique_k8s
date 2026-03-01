@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getInvoice, updateInvoice } from '../../api/gateway';
-
-const OWNER_USER_ID = '11111111-1111-1111-1111-111111111111';
+import { useAuth } from '../../contexts/AuthContext';
 
 type LineItem = {
   description: string;
@@ -14,6 +13,7 @@ type LineItem = {
 const InvoiceEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
@@ -98,7 +98,7 @@ const InvoiceEdit = () => {
 
     try {
       await updateInvoice(id, {
-        ownerUserId: OWNER_USER_ID,
+        ownerUserId: user?.id ?? '',
         clientName,
         clientEmail,
         billingAddress,

@@ -1,24 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const DEMO_EMAIL = 'admin@example.com';
-const DEMO_PASSWORD = 'admin123!';
+import { loginUser } from '../api/gateway';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
-  const [email, setEmail] = useState(DEMO_EMAIL);
-  const [password, setPassword] = useState(DEMO_PASSWORD);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { refreshUser } = useAuth();
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
+    setError('');
+    setLoading(true);
+    try {
+      const auth = await loginUser({ email, password });
+      localStorage.setItem('access_token', auth.accessToken);
+      localStorage.setItem('refresh_token', auth.refreshToken);
       localStorage.setItem('demo_auth', 'true');
-      setError('');
+      await refreshUser();
       navigate('/admin');
-      return;
+    } catch (err: any) {
+      setError(err.message || 'Erreur de connexion.');
+    } finally {
+      setLoading(false);
     }
-    setError('Identifiants invalides.');
   };
 
   return (
@@ -26,13 +34,13 @@ const Login = () => {
       <div className="w-full max-w-md rounded-3xl border border-white/80 bg-white p-8 shadow-card">
         <div className="mb-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-500">
-            Portail admin
+            Plateforme
           </p>
           <h1 className="font-display text-2xl font-semibold text-ink-900">
             Connexion
           </h1>
           <p className="text-sm text-slate-500">
-            Acces administrateur (mode demo).
+            Connectez-vous avec votre compte.
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -42,6 +50,7 @@ const Login = () => {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              placeholder="votre.email@exemple.com"
               required
               className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
             />
@@ -52,6 +61,7 @@ const Login = () => {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              placeholder="Mot de passe"
               required
               className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm"
             />
@@ -63,15 +73,12 @@ const Login = () => {
           ) : null}
           <button
             type="submit"
-            className="w-full rounded-2xl bg-ink-500 px-4 py-3 text-sm font-semibold text-white shadow-soft"
+            disabled={loading}
+            className="w-full rounded-2xl bg-ink-500 px-4 py-3 text-sm font-semibold text-white shadow-soft disabled:opacity-50"
           >
-            Se connecter
+            {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
-        <div className="mt-6 rounded-2xl border border-ink-100 bg-ink-50 px-4 py-3 text-xs text-ink-700">
-          Identifiants: <strong>{DEMO_EMAIL}</strong> /{' '}
-          <strong>{DEMO_PASSWORD}</strong>
-        </div>
       </div>
     </div>
   );

@@ -16,6 +16,7 @@
 12. [Guide de demarrage](#12-guide-de-demarrage)
 13. [Scaling](#13-scaling)
 14. [Structure du projet](#14-structure-du-projet)
+15. [Corrections et changements](#15-corrections-et-changements)
 
 ---
 
@@ -663,13 +664,15 @@ Caracteristiques :
 
 ### 10.2 Frontend (mode demo)
 
-Pour le developpement, une authentification simplifiee est disponible :
+Pour le developpement, des identifiants demo sont pre-remplis sur la page de connexion :
 
 | Propriete       | Valeur              |
 |-----------------|---------------------|
 | Email           | admin@example.com   |
-| Mot de passe    | admin123!           |
-| Stockage        | localStorage (`demo_auth`) |
+| Mot de passe    | admin1234           |
+| Stockage        | localStorage (`access_token`, `refresh_token`, `demo_auth`) |
+
+La connexion appelle l'API backend (`POST /api/auth/login`). Si l'utilisateur n'existe pas encore, un enregistrement automatique est effectue via `POST /api/auth/register`. Les tokens JWT retournes sont stockes dans le `localStorage` et injectes dans toutes les requetes API.
 
 La route `/admin/*` est protegee par le composant `ProtectedRoute` qui verifie `localStorage.demo_auth`.
 
@@ -928,6 +931,50 @@ plateforme_electronique_k8s/
 
 ---
 
+## 15. Corrections et changements
+
+### 15.1 Correction : Erreur API sur la page Profil
+
+**Probleme :**
+La page de connexion (`Login.tsx`) fonctionnait en mode demo cote client uniquement. Elle comparait les identifiants saisis avec des valeurs codees en dur et stockait simplement `demo_auth=true` dans le `localStorage`, sans jamais appeler l'API backend `/api/auth/login`. Aucun token JWT n'etait donc enregistre.
+
+Lorsque l'utilisateur accedait a la page Profil (`/admin/profile`), le composant appelait `GET /api/users/me` sans header `Authorization`. Le backend retournait une erreur `401 Unauthorized`, affichee comme "Erreur API" dans l'interface.
+
+**Cause racine :**
+Deconnexion entre le mecanisme de login frontend (demo, sans appel API) et les endpoints backend proteges par JWT.
+
+**Fichiers modifies :**
+
+| Fichier | Modification |
+|---------|-------------|
+| `frontend/src/api/types.ts` | Ajout des types `AuthResponse`, `LoginPayload` et `RegisterPayload` |
+| `frontend/src/api/gateway.ts` | Ajout des fonctions `loginUser()` et `registerUser()` appelant `/api/auth/login` et `/api/auth/register` |
+| `frontend/src/pages/Login.tsx` | Remplacement de la verification cote client par un appel reel a l'API backend. Stockage du `access_token` et `refresh_token` dans le `localStorage`. Fallback sur l'enregistrement automatique au premier usage |
+| `frontend/src/components/AdminHeader.tsx` | Nettoyage des tokens `access_token` et `refresh_token` du `localStorage` lors de la deconnexion |
+
+**Flux d'authentification apres correction :**
+
+```
+1. L'utilisateur saisit ses identifiants sur /login
+2. Le frontend appelle POST /api/auth/login
+3. Si l'utilisateur n'existe pas, fallback sur POST /api/auth/register
+4. Le backend retourne { accessToken, refreshToken, expiresInSeconds }
+5. Les tokens sont stockes dans localStorage (access_token, refresh_token)
+6. Le client API (apiFetch) injecte automatiquement le header Authorization: Bearer <token>
+7. Les endpoints proteges (/api/users/me, PUT /api/users/{id}, etc.) fonctionnent correctement
+```
+
+**Identifiants demo mis a jour :**
+
+| Propriete | Valeur |
+|-----------|--------|
+| Email | admin@example.com |
+| Mot de passe | admin1234 |
+
+Le mot de passe a ete modifie de `admin123!` a `admin1234` pour respecter la contrainte de validation backend (`@Size(min = 8)`).
+
+---
+
 ## URLs de reference rapide
 
 | Ressource               | URL                                    |
@@ -938,5 +985,5 @@ plateforme_electronique_k8s/
 | Keycloak Admin           | http://localhost:8081/admin             |
 | PostgreSQL               | localhost:5432                          |
 | Redis                    | localhost:6379                          |
-| Login demo               | admin@example.com / admin123!          |
+| Login demo               | admin@example.com / admin1234          |
 | Keycloak admin           | admin / admin                          |

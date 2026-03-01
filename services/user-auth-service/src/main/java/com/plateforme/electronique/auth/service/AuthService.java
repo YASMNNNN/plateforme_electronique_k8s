@@ -33,6 +33,9 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
+        if ("ADMIN".equalsIgnoreCase(request.getRole())) {
+            throw new IllegalArgumentException("Cannot self-register as ADMIN");
+        }
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already in use");
         }

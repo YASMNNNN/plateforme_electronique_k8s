@@ -1,6 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import logo from '../assets/logo.jpg';
+import { getSidebarItems } from '../config/permissions';
+import { useAuth } from '../contexts/AuthContext';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -11,6 +13,10 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   ].join(' ');
 
 const Sidebar = () => {
+  const { user } = useAuth();
+  const role = user?.role ?? 'USER';
+  const items = getSidebarItems(role);
+
   return (
     <aside className="w-full max-w-[270px] border-r border-white/50 bg-white/70 p-6 backdrop-blur-xl lg:min-h-screen">
       <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-card">
@@ -26,30 +32,16 @@ const Sidebar = () => {
       </div>
 
       <nav className="mt-10 grid gap-2">
-        <NavLink to="/admin" end className={navLinkClass}>
-          Tableau de bord
-        </NavLink>
-        <NavLink to="/admin/invoices" className={navLinkClass}>
-          Factures client
-        </NavLink>
-        <NavLink to="/admin/payments" className={navLinkClass}>
-          Paiements
-        </NavLink>
-        <NavLink to="/admin/profile" className={navLinkClass}>
-          Mon profil
-        </NavLink>
-        <NavLink to="/admin/users" className={navLinkClass}>
-          Utilisateurs
-        </NavLink>
-        <NavLink to="/admin/subscriptions" className={navLinkClass}>
-          Abonnements
-        </NavLink>
-        <NavLink to="/admin/cards" className={navLinkClass}>
-          Cartes
-        </NavLink>
-        <NavLink to="/admin/settings" className={navLinkClass}>
-          Parametres
-        </NavLink>
+        {items.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            end={item.path === '/admin'}
+            className={navLinkClass}
+          >
+            {item.label}
+          </NavLink>
+        ))}
       </nav>
 
       <div className="mt-10 flex justify-center rounded-2xl border border-white/70 bg-white/70 p-4">

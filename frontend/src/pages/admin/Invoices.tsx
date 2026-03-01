@@ -6,10 +6,12 @@ import {
   validateInvoice,
   sendInvoice,
   cancelInvoice,
+  markInvoicePaid,
   downloadInvoicePdf,
   Invoice,
   InvoiceStatus,
 } from '../../api/gateway';
+import { usePermission } from '../../hooks/usePermission';
 
 const statusStyles: Record<InvoiceStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
@@ -51,6 +53,7 @@ const ConfirmModal = ({ message, onConfirm, onCancel }: ConfirmModalProps) => (
 
 const Invoices = () => {
   const navigate = useNavigate();
+  const { can, isAdmin, userId } = usePermission();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(0);
@@ -63,10 +66,12 @@ const Invoices = () => {
     action: () => Promise<void>;
   } | null>(null);
 
+  const ownerUserId = isAdmin ? undefined : userId;
+
   const loadInvoices = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await getInvoices({ page, size: 10 });
+      const response = await getInvoices({ ownerUserId, page, size: 10 });
       setInvoices(response.content);
       setTotalPages(response.totalPages || 1);
       setError('');
@@ -77,14 +82,14 @@ const Invoices = () => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [ownerUserId, page]);
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        const response = await getInvoices({ page, size: 10 });
+        const response = await getInvoices({ ownerUserId, page, size: 10 });
         if (!isMounted) return;
         setInvoices(response.content);
         setTotalPages(response.totalPages || 1);
@@ -102,7 +107,7 @@ const Invoices = () => {
     return () => {
       isMounted = false;
     };
-  }, [page]);
+  }, [ownerUserId, page]);
 
   const runAction = async (action: () => Promise<void>) => {
     try {
@@ -132,6 +137,10 @@ const Invoices = () => {
       return matchesStatus && matchesSearch;
     });
   }, [invoices, search, statusFilter]);
+
+  const canValidate = can('invoices.validate');
+  const canDelete = can('invoices.delete');
+  const canMarkPaid = can('invoices.markPaid');
 
   return (
     <div className="space-y-6">
@@ -263,27 +272,31 @@ const Invoices = () => {
                         >
                           Modifier
                         </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            runAction(() => validateInvoice(invoice.id).then(() => {}))
-                          }
-                          className="rounded-xl px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50"
-                        >
-                          Valider
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setConfirmAction({
-                              message: `Supprimer la facture ${invoice.invoiceNumber || 'brouillon'} ?`,
-                              action: () => deleteInvoice(invoice.id),
-                            })
-                          }
-                          className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
-                        >
-                          Supprimer
-                        </button>
+                        {canValidate && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              runAction(() => validateInvoice(invoice.id, ownerUserId).then(() => {}))
+                            }
+                            className="rounded-xl px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50"
+                          >
+                            Valider
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setConfirmAction({
+                                message: `Supprimer la facture ${invoice.invoiceNumber || 'brouillon'} ?`,
+                                action: () => deleteInvoice(invoice.id, ownerUserId),
+                              })
+                            }
+                            className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
+                          >
+                            Supprimer
+                          </button>
+                        )}
                       </>
                     )}
 
@@ -292,7 +305,7 @@ const Invoices = () => {
                         <button
                           type="button"
                           onClick={() =>
-                            runAction(() => sendInvoice(invoice.id).then(() => {}))
+                            runAction(() => sendInvoice(invoice.id, ownerUserId).then(() => {}))
                           }
                           className="rounded-xl px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
                         >
@@ -303,7 +316,7 @@ const Invoices = () => {
                           onClick={() =>
                             setConfirmAction({
                               message: `Annuler la facture ${invoice.invoiceNumber} ?`,
-                              action: () => cancelInvoice(invoice.id).then(() => {}),
+                              action: () => cancelInvoice(invoice.id, ownerUserId).then(() => {}),
                             })
                           }
                           className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
@@ -315,9 +328,23 @@ const Invoices = () => {
 
                     {invoice.status === 'SENT' && (
                       <>
+                        {canMarkPaid && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setConfirmAction({
+                                message: `Marquer la facture ${invoice.invoiceNumber} comme payee ?`,
+                                action: () => markInvoicePaid(invoice.id).then(() => {}),
+                              })
+                            }
+                            className="rounded-xl px-2 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50"
+                          >
+                            Payee
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => downloadInvoicePdf(invoice.id)}
+                          onClick={() => downloadInvoicePdf(invoice.id, ownerUserId)}
                           className="rounded-xl px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
                         >
                           PDF
@@ -327,7 +354,7 @@ const Invoices = () => {
                           onClick={() =>
                             setConfirmAction({
                               message: `Annuler la facture ${invoice.invoiceNumber} ?`,
-                              action: () => cancelInvoice(invoice.id).then(() => {}),
+                              action: () => cancelInvoice(invoice.id, ownerUserId).then(() => {}),
                             })
                           }
                           className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"
@@ -340,20 +367,20 @@ const Invoices = () => {
                     {invoice.status === 'PAID' && (
                       <button
                         type="button"
-                        onClick={() => downloadInvoicePdf(invoice.id)}
+                        onClick={() => downloadInvoicePdf(invoice.id, ownerUserId)}
                         className="rounded-xl px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
                       >
                         PDF
                       </button>
                     )}
 
-                    {invoice.status === 'CANCELLED' && (
+                    {invoice.status === 'CANCELLED' && canDelete && (
                       <button
                         type="button"
                         onClick={() =>
                           setConfirmAction({
                             message: `Supprimer definitivement la facture ${invoice.invoiceNumber || 'annulee'} ?`,
-                            action: () => deleteInvoice(invoice.id),
+                            action: () => deleteInvoice(invoice.id, ownerUserId),
                           })
                         }
                         className="rounded-xl px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50"

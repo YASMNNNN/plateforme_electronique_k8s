@@ -6,10 +6,12 @@ import {
   validateInvoice,
   sendInvoice,
   cancelInvoice,
+  markInvoicePaid,
   downloadInvoicePdf,
   Invoice,
   InvoiceStatus,
 } from '../../api/gateway';
+import { usePermission } from '../../hooks/usePermission';
 
 const statusStyles: Record<InvoiceStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
@@ -30,6 +32,7 @@ const statusLabels: Record<InvoiceStatus, string> = {
 const InvoiceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { can, isAdmin, userId } = usePermission();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -38,13 +41,18 @@ const InvoiceDetail = () => {
     action: () => Promise<void>;
   } | null>(null);
 
+  const ownerUserId = isAdmin ? undefined : userId;
+  const canValidate = can('invoices.validate');
+  const canDelete = can('invoices.delete');
+  const canMarkPaid = can('invoices.markPaid');
+
   useEffect(() => {
     if (!id) return;
     let isMounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        const data = await getInvoice(id);
+        const data = await getInvoice(id, ownerUserId);
         if (!isMounted) return;
         setInvoice(data);
         setError('');
@@ -59,7 +67,7 @@ const InvoiceDetail = () => {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, ownerUserId]);
 
   const runAction = async (action: () => Promise<void>) => {
     try {
@@ -72,7 +80,7 @@ const InvoiceDetail = () => {
   const handleValidate = () => {
     if (!id) return;
     runAction(async () => {
-      const updated = await validateInvoice(id);
+      const updated = await validateInvoice(id, ownerUserId);
       setInvoice(updated);
     });
   };
@@ -80,7 +88,7 @@ const InvoiceDetail = () => {
   const handleSend = () => {
     if (!id) return;
     runAction(async () => {
-      const updated = await sendInvoice(id);
+      const updated = await sendInvoice(id, ownerUserId);
       setInvoice(updated);
     });
   };
@@ -90,7 +98,7 @@ const InvoiceDetail = () => {
     setConfirmAction({
       message: `Supprimer la facture ${invoice?.invoiceNumber || 'brouillon'} ?`,
       action: async () => {
-        await deleteInvoice(id);
+        await deleteInvoice(id, ownerUserId);
         navigate('/admin/invoices');
       },
     });
@@ -101,7 +109,18 @@ const InvoiceDetail = () => {
     setConfirmAction({
       message: `Annuler la facture ${invoice?.invoiceNumber} ?`,
       action: async () => {
-        const updated = await cancelInvoice(id);
+        const updated = await cancelInvoice(id, ownerUserId);
+        setInvoice(updated);
+      },
+    });
+  };
+
+  const handleMarkPaid = () => {
+    if (!id) return;
+    setConfirmAction({
+      message: `Marquer la facture ${invoice?.invoiceNumber} comme payee ?`,
+      action: async () => {
+        const updated = await markInvoicePaid(id);
         setInvoice(updated);
       },
     });
@@ -115,7 +134,7 @@ const InvoiceDetail = () => {
 
   const handleDownloadPdf = () => {
     if (!id) return;
-    downloadInvoicePdf(id);
+    downloadInvoicePdf(id, ownerUserId);
   };
 
   const formatCurrency = (value?: number) =>
@@ -215,20 +234,24 @@ const InvoiceDetail = () => {
               >
                 Modifier
               </Link>
-              <button
-                type="button"
-                onClick={handleValidate}
-                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"
-              >
-                Valider
-              </button>
-              <button
-                type="button"
-                onClick={handleDelete}
-                className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
-              >
-                Supprimer
-              </button>
+              {canValidate && (
+                <button
+                  type="button"
+                  onClick={handleValidate}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600"
+                >
+                  Valider
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white"
+                >
+                  Supprimer
+                </button>
+              )}
             </>
           )}
           {invoice.status === 'VALIDATED' && (
@@ -251,6 +274,15 @@ const InvoiceDetail = () => {
           )}
           {invoice.status === 'SENT' && (
             <>
+              {canMarkPaid && (
+                <button
+                  type="button"
+                  onClick={handleMarkPaid}
+                  className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-soft"
+                >
+                  Marquer comme payee
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleDownloadPdf}
@@ -276,7 +308,7 @@ const InvoiceDetail = () => {
               Telecharger PDF
             </button>
           )}
-          {invoice.status === 'CANCELLED' && (
+          {invoice.status === 'CANCELLED' && canDelete && (
             <button
               type="button"
               onClick={handleDelete}

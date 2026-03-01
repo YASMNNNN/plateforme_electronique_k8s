@@ -71,23 +71,23 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id, @RequestParam(required = false) UUID ownerUserId) {
         invoiceService.deleteDraft(id, ownerUserId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/validate")
-    public ResponseEntity<Invoice> validate(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
+    public ResponseEntity<Invoice> validate(@PathVariable UUID id, @RequestParam(required = false) UUID ownerUserId) {
         return ResponseEntity.ok(invoiceService.validateInvoice(id, ownerUserId));
     }
 
     @PostMapping("/{id}/send")
-    public ResponseEntity<Invoice> send(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
+    public ResponseEntity<Invoice> send(@PathVariable UUID id, @RequestParam(required = false) UUID ownerUserId) {
         return ResponseEntity.ok(invoiceService.sendInvoice(id, ownerUserId));
     }
 
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<Invoice> cancel(@PathVariable UUID id, @RequestParam UUID ownerUserId) {
+    public ResponseEntity<Invoice> cancel(@PathVariable UUID id, @RequestParam(required = false) UUID ownerUserId) {
         return ResponseEntity.ok(invoiceService.cancelInvoice(id, ownerUserId));
     }
 

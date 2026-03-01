@@ -79,8 +79,14 @@ public class InvoiceService {
     }
 
     public Invoice validateInvoice(UUID invoiceId, UUID ownerId) {
-        Invoice invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
-                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        Invoice invoice;
+        if (ownerId != null) {
+            invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        } else {
+            invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        }
         if (invoice.getStatus() != Invoice.Status.DRAFT) {
             throw new IllegalStateException("Only drafts can be validated");
         }
@@ -91,8 +97,14 @@ public class InvoiceService {
     }
 
     public Invoice sendInvoice(UUID invoiceId, UUID ownerId) {
-        Invoice invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
-                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        Invoice invoice;
+        if (ownerId != null) {
+            invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        } else {
+            invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        }
         if (invoice.getStatus() == Invoice.Status.DRAFT) {
             throw new IllegalStateException("Invoice must be validated before send");
         }
@@ -102,16 +114,28 @@ public class InvoiceService {
     }
 
     public Invoice cancelInvoice(UUID invoiceId, UUID ownerId) {
-        Invoice invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
-                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        Invoice invoice;
+        if (ownerId != null) {
+            invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        } else {
+            invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        }
         invoice.setStatus(Invoice.Status.CANCELLED);
         invoice.setUpdatedAt(LocalDateTime.now());
         return invoiceRepository.save(invoice);
     }
 
     public void deleteDraft(UUID invoiceId, UUID ownerId) {
-        Invoice invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
-                .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        Invoice invoice;
+        if (ownerId != null) {
+            invoice = invoiceRepository.findByIdAndOwnerUserId(invoiceId, ownerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        } else {
+            invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invoice not found"));
+        }
         if (invoice.getStatus() != Invoice.Status.DRAFT && invoice.getStatus() != Invoice.Status.CANCELLED) {
             throw new IllegalStateException("Only drafts and cancelled invoices can be deleted");
         }

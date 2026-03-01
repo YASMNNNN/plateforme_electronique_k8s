@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { registerUser, getUsers, deleteUser } from '../../api/gateway';
+import { adminCreateUser, getUsers, deleteUser } from '../../api/gateway';
 import type { RegisterPayload, UserProfile } from '../../api/gateway';
 
 const Users = () => {
@@ -43,7 +43,7 @@ const Users = () => {
     setError('');
     setSuccess('');
     try {
-      await registerUser(form);
+      await adminCreateUser(form);
       setSuccess(`Utilisateur ${form.email} cree avec succes.`);
       setForm({
         email: '',

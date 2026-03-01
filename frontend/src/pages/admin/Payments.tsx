@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { getPayments, Payment } from '../../api/gateway';
+import { usePermission } from '../../hooks/usePermission';
 
 const Payments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { can } = usePermission();
+
+  const showGlobalStats = can('payments.globalStats');
 
   useEffect(() => {
     let isMounted = true;
@@ -65,7 +69,7 @@ const Payments = () => {
         </p>
       </div>
 
-      {!loading && payments.length > 0 ? (
+      {!loading && payments.length > 0 && showGlobalStats ? (
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-white/80 bg-white p-5 shadow-card">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-400">
