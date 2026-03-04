@@ -1,0 +1,84 @@
+ What a USER Can Do
+
+  Pages Accessible
+  ┌────────────────┬────────────────────────────────────────────┐
+  │      Page      │                  Details                   │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Dashboard      │ Personal stats only (own invoices)         │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Invoices       │ List/view own invoices only                │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Invoice Create │ Create new invoices (as draft)             │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Invoice Detail │ View own invoice details                   │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Invoice Edit   │ Edit own draft invoices                    │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Clients        │ Client management                          │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Payments       │ View own payment records (no global stats) │
+  ├────────────────┼────────────────────────────────────────────┤
+  │ Profile        │ View/edit own profile                      │
+  └────────────────┴────────────────────────────────────────────┘
+  Invoice Features
+
+  - Create invoices (draft)
+  - Edit own draft invoices
+  - View invoice details & download PDFs
+  - Send validated invoices
+  - Cancel invoices
+
+  User Account
+
+  - View own profile (GET /api/users/me)
+  - Update own profile (PUT /api/users/{ownId})
+  - Change own password (PUT /api/users/me/password)
+  - Delete own account
+
+  Payments, Cards & Subscriptions
+
+  - Create/manage own cards
+  - Create/manage own subscriptions
+  - View own payment history
+
+  ---
+  What a USER CANNOT Do (Admin-Only)
+
+  Restricted Pages
+  ┌─────────────────────────────────────────────────┬───────────────────────────────────────────────┐
+  │                      Page                       │              Restriction Source               │
+  ├─────────────────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Users Management (/admin/users)                 │ RoleGuard + @PreAuthorize("hasRole('ADMIN')") │
+  ├─────────────────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Subscriptions Management (/admin/subscriptions) │ RoleGuard                                     │
+  ├─────────────────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Cards Management (/admin/cards)                 │ RoleGuard                                     │
+  ├─────────────────────────────────────────────────┼───────────────────────────────────────────────┤
+  │ Settings (/admin/settings)                      │ RoleGuard                                     │
+  └─────────────────────────────────────────────────┴───────────────────────────────────────────────┘
+  Restricted Invoice Actions (from permissions.ts)
+
+  - Validate invoices (invoices.validate → ADMIN only)
+  - Delete invoices (invoices.delete → ADMIN only)
+  - Mark invoices as paid (invoices.markPaid → ADMIN only)
+
+  Restricted Data Visibility
+
+  - Global dashboard stats (dashboard.globalStats → ADMIN only)
+  - Global payment stats (payments.globalStats → ADMIN only)
+  - Users see only their own invoices/data; admins see everything
+
+  Restricted API Endpoints
+
+  - GET /api/users — list all users (ADMIN only via @PreAuthorize)
+  - POST /api/users — create new users (ADMIN only via @PreAuthorize)
+  - DELETE /api/users/{id} — delete other users' accounts (runtime check)
+
+  ---
+  Security Note
+
+  The backend invoice service relies mostly on frontend filtering (passing ownerUserId as a query parameter) rather than backend @PreAuthorize annotations. This
+  means the access control for invoices is primarily enforced on the frontend side — a regular user could theoretically access other users' invoices by
+  manipulating API calls directly. Only the user-auth-service has proper backend role enforcement with @PreAuthorize.
+
+
