@@ -1,4 +1,5 @@
 FROM maven:3.9.9-eclipse-temurin-21 AS build
+LABEL maintainer="Yesmine GRASSA <yasmineg432@gmail.com>"
 
 WORKDIR /app
 COPY pom.xml .

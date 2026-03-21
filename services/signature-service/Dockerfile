@@ -1,4 +1,5 @@
 FROM eclipse-temurin:21-jre-alpine
+LABEL maintainer="Yesmine GRASSA <yasmineg432@gmail.com>"
 
 WORKDIR /app
 EXPOSE 8080
