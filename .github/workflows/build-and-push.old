@@ -7,7 +7,12 @@ on:
   pull_request:
     branches:
       - main
-
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Forcer le rebuild de tous les services'
+        required: false
+        default: 'true'
 
 permissions:
   contents: write
@@ -27,20 +32,22 @@ jobs:
   detect:
     runs-on: ubuntu-latest
     outputs:
-      image_tag:    ${{ steps.tag.outputs.image_tag }}
-      eureka:       'true'
-      gateway:      'true'
-      invoice:      'true'
-      payment:      'true'
-      subscription: 'true'
-      notification: 'true'
-      signature:    'true'
-      userauth:     'true'
-      frontend:     'true'
-      any_rebuild:  'true'
+      image_tag:          ${{ steps.tag.outputs.image_tag }}
+      eureka:             ${{ steps.changes.outputs.eureka }}
+      gateway:            ${{ steps.changes.outputs.gateway }}
+      invoice:            ${{ steps.changes.outputs.invoice }}
+      payment:            ${{ steps.changes.outputs.payment }}
+      subscription:       ${{ steps.changes.outputs.subscription }}
+      notification:       ${{ steps.changes.outputs.notification }}
+      signature:          ${{ steps.changes.outputs.signature }}
+      userauth:           ${{ steps.changes.outputs.userauth }}
+      frontend:           ${{ steps.changes.outputs.frontend }}
+      any_rebuild:        ${{ steps.changes.outputs.any_rebuild }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Compute SHORT_SHA tag
         id: tag
@@ -48,7 +55,72 @@ jobs:
           SHORT_SHA=${GITHUB_SHA::7}
           echo "image_tag=$SHORT_SHA" >> $GITHUB_OUTPUT
           echo "Tag généré : $SHORT_SHA"
-          echo "➜ Rebuild complet de tous les services à chaque push" 
+
+      - name: Detect per-service changes
+        id: changes
+        run: |
+          # ── CAS 1 : déclenchement manuel workflow_dispatch ──────────
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FORCE="${{ github.event.inputs.force_rebuild }}"
+            if [ "$FORCE" = "true" ]; then
+              echo "➜ workflow_dispatch force_rebuild=true → rebuild complet"
+              for svc in eureka gateway invoice payment subscription notification signature userauth frontend; do
+                echo "${svc}=true" >> $GITHUB_OUTPUT
+              done
+              echo "any_rebuild=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+
+          # ── CAS 2 : premier commit (before = 000...0) ───────────────
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "➜ Premier commit → rebuild complet"
+            for svc in eureka gateway invoice payment subscription notification signature userauth frontend; do
+              echo "${svc}=true" >> $GITHUB_OUTPUT
+            done
+            echo "any_rebuild=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # ── CAS 3 : push normal — diff par fichier ──────────────────
+          CHANGED=$(git diff --name-only $BEFORE $AFTER)
+          echo "Fichiers modifiés :"
+          echo "$CHANGED"
+
+          ANY=false
+
+          # Fonction : match dossier OU Dockerfile du service
+          detect() {
+            local key=$1; local dir=$2; local dockerfile=$3
+            if echo "$CHANGED" | grep -qE "^(${dir}|${dockerfile})"; then
+              echo "${key}=true"  >> $GITHUB_OUTPUT
+              echo "  ✔ ${key} modifié"
+              ANY=true
+            else
+              echo "${key}=false" >> $GITHUB_OUTPUT
+            fi
+          }
+
+          detect eureka        "services/eureka-server/"        "services/eureka-server/Dockerfile"
+          detect gateway       "services/api-gateway/"          "services/api-gateway/Dockerfile"
+          detect invoice       "services/invoice-service/"      "services/invoice-service/Dockerfile"
+          detect payment       "services/payment-service/"      "services/payment-service/Dockerfile"
+          detect subscription  "services/subscription-service/" "services/subscription-service/Dockerfile"
+          detect notification  "services/notification-service/" "services/notification-service/Dockerfile"
+          detect signature     "services/signature-service/"    "services/signature-service/Dockerfile"
+          detect userauth      "services/user-auth-service/"    "services/user-auth-service/Dockerfile"
+          detect frontend      "frontend/"                      "frontend/Dockerfile"
+
+          if [ "$ANY" = "true" ]; then
+            echo "any_rebuild=true"  >> $GITHUB_OUTPUT
+            echo "➜ Au moins un service modifié → pipeline activé"
+          else
+            echo "any_rebuild=false" >> $GITHUB_OUTPUT
+            echo "➜ Aucun changement pertinent → pipeline ignoré"
+          fi
 
   # ═══════════════════════════════════════════════════════════════
   # JOB 1 : BUILD & PUSH — parallèle par service (conditionnel)
@@ -58,7 +130,7 @@ jobs:
   build-eureka:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.eureka == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -96,7 +168,7 @@ jobs:
   build-gateway:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.gateway == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -134,7 +206,7 @@ jobs:
   build-invoice:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.invoice == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -172,7 +244,7 @@ jobs:
   build-payment:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.payment == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -210,7 +282,7 @@ jobs:
   build-subscription:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.subscription == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -248,7 +320,7 @@ jobs:
   build-notification:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.notification == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -286,7 +358,7 @@ jobs:
   build-signature:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.signature == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -324,7 +396,7 @@ jobs:
   build-userauth:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.userauth == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -362,7 +434,7 @@ jobs:
   build-frontend:
     runs-on: ubuntu-latest
     needs: detect
-    if: always()
+    if: needs.detect.outputs.frontend == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -403,6 +475,7 @@ jobs:
   sast-code:
     runs-on: ubuntu-latest
     needs: detect
+    if: needs.detect.outputs.any_rebuild == 'true'
     environment: testing
     steps:
       - uses: actions/checkout@v4
@@ -461,6 +534,7 @@ jobs:
       - build-frontend
     if: |
       always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
       !contains(needs.*.result, 'failure')
     environment: testing
     steps:
@@ -583,6 +657,7 @@ jobs:
       - build-frontend
     if: |
       always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
       !contains(needs.*.result, 'failure')
     environment: testing
     steps:
@@ -701,6 +776,7 @@ jobs:
       - dast-zap-baseline
     if: |
       always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
       needs.dast-zap-baseline.result != 'failure'
     environment: testing
     steps:
