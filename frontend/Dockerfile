@@ -1,6 +1,6 @@
 # Stage 1: build the React app (includes logo from src/assets)
-LABEL maintainer="Yesmine GRASSA <yasmineg432@gmail.com>"
 FROM node:20-alpine AS builder
+LABEL maintainer="Yesmine GRASSA <yasmineg432@gmail.com>"
 
 WORKDIR /app
 

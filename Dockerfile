@@ -1,6 +1,6 @@
 # Generic Spring Boot Dockerfile
-LABEL maintainer="Yesmine GRASSA <yasmineg432@gmail.com>"
 FROM eclipse-temurin:21-jdk-alpine
+LABEL maintainer="Yesmine GRASSA <yasmineg432@gmail.com>"
 
 # Install required packages for running Spring Boot applications
 RUN apk add --no-cache \
