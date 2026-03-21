@@ -1,0 +1,16 @@
+# =============================================================
+#  Grafana - Provisioning des dashboards
+# =============================================================
+
+apiVersion: 1
+
+providers:
+  - name: "plateforme-electronique"
+    orgId: 1
+    folder: "Plateforme Electronique"
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

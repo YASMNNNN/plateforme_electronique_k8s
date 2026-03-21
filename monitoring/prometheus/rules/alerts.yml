@@ -1,0 +1,87 @@
+# =============================================================
+#  Règles d'alerte - Plateforme Electronique
+# =============================================================
+groups:
+
+  - name: containers
+    rules:
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name!=""}) or time() - container_last_seen{name!=""} > 60
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container arrêté : {{ $labels.name }}"
+          description: "Le container {{ $labels.name }} n'est plus détecté depuis 1 minute."
+
+      - alert: ContainerHighCPU
+        expr: >
+          (rate(container_cpu_usage_seconds_total{name!=""}[2m]) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU élevé : {{ $labels.name }}"
+          description: "Container {{ $labels.name }} : CPU > 80% depuis 2 min (actuel: {{ $value | printf \"%.1f\" }}%)"
+
+      - alert: ContainerHighMemory
+        expr: >
+          (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} * 100) > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mémoire élevée : {{ $labels.name }}"
+          description: "Container {{ $labels.name }} : RAM > 85% de la limite."
+
+  - name: host
+    rules:
+      - alert: HostHighCPU
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "CPU hôte élevé"
+          description: "CPU hôte > 85% depuis 5 min."
+
+      - alert: HostLowDisk
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disque presque plein"
+          description: "Espace disque disponible < 15% sur /."
+
+      - alert: HostHighMemory
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Mémoire hôte critique"
+          description: "RAM hôte utilisée > 90%."
+
+  - name: microservices
+    rules:
+      - alert: ServiceHighErrorRate
+        expr: >
+          rate(http_server_requests_seconds_count{status=~"5.."}[2m])
+          / rate(http_server_requests_seconds_count[2m]) * 100 > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Taux d'erreur 5xx élevé : {{ $labels.service }}"
+          description: "Service {{ $labels.service }} : erreurs 5xx > 5%."
+
+      - alert: ServiceHighLatency
+        expr: >
+          histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[2m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence élevée : {{ $labels.service }}"
+          description: "P95 latence > 2 secondes sur {{ $labels.service }}."
