@@ -92,6 +92,17 @@ jobs:
           detect userauth      "services/user-auth-service/"
           detect frontend      "frontend/"
 
+          # Détecter modification des Dockerfiles individuels
+          if echo "$CHANGED" | grep -qE "^services/eureka-server/Dockerfile$";        then echo "eureka=true"        >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/api-gateway/Dockerfile$";          then echo "gateway=true"       >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/invoice-service/Dockerfile$";      then echo "invoice=true"       >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/payment-service/Dockerfile$";      then echo "payment=true"       >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/subscription-service/Dockerfile$"; then echo "subscription=true"  >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/notification-service/Dockerfile$"; then echo "notification=true"  >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/signature-service/Dockerfile$";    then echo "signature=true"     >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^services/user-auth-service/Dockerfile$";    then echo "userauth=true"      >> $GITHUB_OUTPUT; ANY=true; fi
+          if echo "$CHANGED" | grep -qE "^frontend/Dockerfile$";                      then echo "frontend=true"      >> $GITHUB_OUTPUT; ANY=true; fi
+
           if [ "$ANY" = "true" ]; then
             echo "any_rebuild=true"  >> $GITHUB_OUTPUT
             echo "➜ Au moins un service modifié → pipeline activé"
