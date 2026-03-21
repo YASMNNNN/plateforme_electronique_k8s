@@ -7,6 +7,12 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Forcer le rebuild de tous les services'
+        required: false
+        default: 'true'
 
 permissions:
   contents: write
@@ -53,10 +59,23 @@ jobs:
       - name: Detect per-service changes
         id: changes
         run: |
+          # ── CAS 1 : déclenchement manuel workflow_dispatch ──────────
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FORCE="${{ github.event.inputs.force_rebuild }}"
+            if [ "$FORCE" = "true" ]; then
+              echo "➜ workflow_dispatch force_rebuild=true → rebuild complet"
+              for svc in eureka gateway invoice payment subscription notification signature userauth frontend; do
+                echo "${svc}=true" >> $GITHUB_OUTPUT
+              done
+              echo "any_rebuild=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+
           BEFORE="${{ github.event.before }}"
           AFTER="${{ github.event.after }}"
 
-          # Premier commit → tout rebuilder
+          # ── CAS 2 : premier commit (before = 000...0) ───────────────
           if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             echo "➜ Premier commit → rebuild complet"
             for svc in eureka gateway invoice payment subscription notification signature userauth frontend; do
@@ -66,14 +85,17 @@ jobs:
             exit 0
           fi
 
+          # ── CAS 3 : push normal — diff par fichier ──────────────────
           CHANGED=$(git diff --name-only $BEFORE $AFTER)
           echo "Fichiers modifiés :"
           echo "$CHANGED"
 
           ANY=false
+
+          # Fonction : match dossier OU Dockerfile du service
           detect() {
-            local key=$1; local pattern=$2
-            if echo "$CHANGED" | grep -qE "^${pattern}"; then
+            local key=$1; local dir=$2; local dockerfile=$3
+            if echo "$CHANGED" | grep -qE "^(${dir}|${dockerfile})"; then
               echo "${key}=true"  >> $GITHUB_OUTPUT
               echo "  ✔ ${key} modifié"
               ANY=true
@@ -82,26 +104,15 @@ jobs:
             fi
           }
 
-          detect eureka        "services/eureka-server/"
-          detect gateway       "services/api-gateway/"
-          detect invoice       "services/invoice-service/"
-          detect payment       "services/payment-service/"
-          detect subscription  "services/subscription-service/"
-          detect notification  "services/notification-service/"
-          detect signature     "services/signature-service/"
-          detect userauth      "services/user-auth-service/"
-          detect frontend      "frontend/"
-
-          # Détecter modification des Dockerfiles individuels
-          if echo "$CHANGED" | grep -qE "^services/eureka-server/Dockerfile$";        then echo "eureka=true"        >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/api-gateway/Dockerfile$";          then echo "gateway=true"       >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/invoice-service/Dockerfile$";      then echo "invoice=true"       >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/payment-service/Dockerfile$";      then echo "payment=true"       >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/subscription-service/Dockerfile$"; then echo "subscription=true"  >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/notification-service/Dockerfile$"; then echo "notification=true"  >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/signature-service/Dockerfile$";    then echo "signature=true"     >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^services/user-auth-service/Dockerfile$";    then echo "userauth=true"      >> $GITHUB_OUTPUT; ANY=true; fi
-          if echo "$CHANGED" | grep -qE "^frontend/Dockerfile$";                      then echo "frontend=true"      >> $GITHUB_OUTPUT; ANY=true; fi
+          detect eureka        "services/eureka-server/"        "services/eureka-server/Dockerfile"
+          detect gateway       "services/api-gateway/"          "services/api-gateway/Dockerfile"
+          detect invoice       "services/invoice-service/"      "services/invoice-service/Dockerfile"
+          detect payment       "services/payment-service/"      "services/payment-service/Dockerfile"
+          detect subscription  "services/subscription-service/" "services/subscription-service/Dockerfile"
+          detect notification  "services/notification-service/" "services/notification-service/Dockerfile"
+          detect signature     "services/signature-service/"    "services/signature-service/Dockerfile"
+          detect userauth      "services/user-auth-service/"    "services/user-auth-service/Dockerfile"
+          detect frontend      "frontend/"                      "frontend/Dockerfile"
 
           if [ "$ANY" = "true" ]; then
             echo "any_rebuild=true"  >> $GITHUB_OUTPUT
