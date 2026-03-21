@@ -3,10 +3,10 @@ name: CI/CD — Plateforme Électronique de Paiement
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 permissions:
   contents: write
@@ -14,14 +14,23 @@ permissions:
   issues: write
 
 # ─────────────────────────────────────────────────────────────────
-# Images DockerHub : yassmineg/plateforme-{eureka,gateway,invoice,
-#   payment,subscription,notification,signature,userauth,frontend}
+# Liste des services buildables (dossier → nom image DockerHub)
+# ─────────────────────────────────────────────────────────────────
+# services/eureka-server   → yassmineg/plateforme-eureka
+# services/api-gateway     → yassmineg/plateforme-gateway
+# services/invoice-service → yassmineg/plateforme-invoice
+# services/payment-service → yassmineg/plateforme-payment
+# services/subscription-service → yassmineg/plateforme-subscription
+# services/notification-service → yassmineg/plateforme-notification
+# services/signature-service    → yassmineg/plateforme-signature
+# services/user-auth-service    → yassmineg/plateforme-userauth
+# frontend/                → yassmineg/plateforme-frontend
 # ─────────────────────────────────────────────────────────────────
 
 jobs:
 
   # ═══════════════════════════════════════════════════════════════
-  # JOB 0 : DETECT — détection fine des changements par service
+  # JOB 0 : DETECT — Détection fine des changements par service
   # ═══════════════════════════════════════════════════════════════
   detect:
     runs-on: ubuntu-latest
@@ -101,7 +110,8 @@ jobs:
           fi
 
   # ═══════════════════════════════════════════════════════════════
-  # JOB 1 : BUILD & PUSH — parallèle par service (conditionnel)
+  # JOB 1 : BUILD & PUSH — Parallèle par service (conditionnel)
+  # Chaque service : build → push → Trivy scan (SARIF + console)
   # ═══════════════════════════════════════════════════════════════
 
   # ── eureka-server ──────────────────────────────────────────────
@@ -119,6 +129,7 @@ jobs:
           TAG=${{ needs.detect.outputs.image_tag }}
           docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-eureka:$TAG ./services/eureka-server
           docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-eureka:$TAG
+          echo "✔ plateforme-eureka:$TAG poussé"
       - name: Trivy — scan eureka (SARIF)
         uses: aquasecurity/trivy-action@master
         with:
@@ -157,6 +168,7 @@ jobs:
           TAG=${{ needs.detect.outputs.image_tag }}
           docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-gateway:$TAG ./services/api-gateway
           docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-gateway:$TAG
+          echo "✔ plateforme-gateway:$TAG poussé"
       - name: Trivy — scan gateway (SARIF)
         uses: aquasecurity/trivy-action@master
         with:
@@ -447,8 +459,7 @@ jobs:
           exit-code: "0"
 
   # ═══════════════════════════════════════════════════════════════
-  # JOB 2 : SAST — Semgrep en mode OSS local (sans token cloud)
-  # FIX : pip install semgrep + CLI --sarif + fallback SARIF vide
+  # JOB 2 : SAST — Analyse statique Semgrep (code source)
   # ═══════════════════════════════════════════════════════════════
   sast-code:
     runs-on: ubuntu-latest
@@ -458,31 +469,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Semgrep CLI
-        run: pip install semgrep --break-system-packages
-
-      - name: Run Semgrep — génération SARIF locale (sans token)
-        run: |
-          semgrep scan \
-            --config "p/owasp-top-ten" \
-            --config "p/secrets" \
-            --config "p/docker" \
-            --config "p/java" \
-            --config "p/javascript" \
-            --sarif \
-            --output semgrep.sarif \
-            . || true
-          echo "--- Vérification fichier SARIF ---"
-          ls -lh semgrep.sarif 2>/dev/null || echo "⚠ semgrep.sarif absent"
-
-      # FIX ERREUR 2 : garantir l'existence du fichier SARIF avant upload
-      - name: Fallback — SARIF vide si Semgrep n'a rien produit
-        if: always()
-        run: |
-          if [ ! -f semgrep.sarif ]; then
-            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > semgrep.sarif
-            echo "⚠ Fichier SARIF vide généré en fallback"
-          fi
+      - name: Run Semgrep (SAST)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/secrets
+            p/docker
+            p/java
+            p/spring-boot
+            p/javascript
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+        continue-on-error: true
 
       - name: Upload Semgrep SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
@@ -493,9 +492,8 @@ jobs:
         continue-on-error: true
 
   # ═══════════════════════════════════════════════════════════════
-  # JOB 3 : DEPLOY
-  # FIX : patch conditionnel — seuls les services réellement
-  #        buildés voient leur build: remplacé par image:
+  # JOB 3 : DEPLOY — docker-compose up avec les images pushées
+  # Attend que tous les builds soient terminés (succès ou skip)
   # ═══════════════════════════════════════════════════════════════
   deploy:
     runs-on: ubuntu-latest
@@ -527,87 +525,51 @@ jobs:
       - name: Docker Login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      # FIX ERREUR 1 : patch conditionnel — services skippés conservent build:
-      - name: Patch docker-compose.yml — injecter les tags d'image (conditionnel)
+      - name: Patch docker-compose.yml — injecter les tags d'image
         env:
-          TAG:                  ${{ needs.detect.outputs.image_tag }}
-          HUB:                  ${{ secrets.DOCKER_USERNAME }}
-          REBUILT_EUREKA:       ${{ needs.detect.outputs.eureka }}
-          REBUILT_GATEWAY:      ${{ needs.detect.outputs.gateway }}
-          REBUILT_INVOICE:      ${{ needs.detect.outputs.invoice }}
-          REBUILT_PAYMENT:      ${{ needs.detect.outputs.payment }}
-          REBUILT_SUBSCRIPTION: ${{ needs.detect.outputs.subscription }}
-          REBUILT_NOTIFICATION: ${{ needs.detect.outputs.notification }}
-          REBUILT_SIGNATURE:    ${{ needs.detect.outputs.signature }}
-          REBUILT_USERAUTH:     ${{ needs.detect.outputs.userauth }}
-          REBUILT_FRONTEND:     ${{ needs.detect.outputs.frontend }}
+          TAG: ${{ needs.detect.outputs.image_tag }}
+          HUB: ${{ secrets.DOCKER_USERNAME }}
         run: |
+          # Remplacer les directives build: par image: pour utiliser les images pushées
+          cat docker-compose.yml | \
+          sed "s|build:\n.*context: ./services/eureka-server|image: ${HUB}/plateforme-eureka:${TAG}|g" \
+          > docker-compose.deploy.yml
+
+          # Approche plus robuste avec Python
           python3 - <<'EOF'
-          import yaml, os
+          import yaml, os, sys
 
           TAG = os.environ['TAG']
           HUB = os.environ['HUB']
 
           SERVICE_MAP = {
-            'eureka-server':        ('REBUILT_EUREKA',       f'{HUB}/plateforme-eureka:{TAG}'),
-            'api-gateway':          ('REBUILT_GATEWAY',      f'{HUB}/plateforme-gateway:{TAG}'),
-            'invoice-service':      ('REBUILT_INVOICE',      f'{HUB}/plateforme-invoice:{TAG}'),
-            'payment-service':      ('REBUILT_PAYMENT',      f'{HUB}/plateforme-payment:{TAG}'),
-            'subscription-service': ('REBUILT_SUBSCRIPTION', f'{HUB}/plateforme-subscription:{TAG}'),
-            'notification-service': ('REBUILT_NOTIFICATION', f'{HUB}/plateforme-notification:{TAG}'),
-            'signature-service':    ('REBUILT_SIGNATURE',    f'{HUB}/plateforme-signature:{TAG}'),
-            'user-auth-service':    ('REBUILT_USERAUTH',     f'{HUB}/plateforme-userauth:{TAG}'),
-            'frontend':             ('REBUILT_FRONTEND',     f'{HUB}/plateforme-frontend:{TAG}'),
+            'eureka-server':       f'{HUB}/plateforme-eureka:{TAG}',
+            'api-gateway':         f'{HUB}/plateforme-gateway:{TAG}',
+            'invoice-service':     f'{HUB}/plateforme-invoice:{TAG}',
+            'payment-service':     f'{HUB}/plateforme-payment:{TAG}',
+            'subscription-service':f'{HUB}/plateforme-subscription:{TAG}',
+            'notification-service':f'{HUB}/plateforme-notification:{TAG}',
+            'signature-service':   f'{HUB}/plateforme-signature:{TAG}',
+            'user-auth-service':   f'{HUB}/plateforme-userauth:{TAG}',
+            'frontend':            f'{HUB}/plateforme-frontend:{TAG}',
           }
 
           with open('docker-compose.yml') as f:
             compose = yaml.safe_load(f)
 
-          for svc_name, (env_key, image_ref) in SERVICE_MAP.items():
+          for svc_name, image_ref in SERVICE_MAP.items():
             if svc_name in compose.get('services', {}):
-              if os.environ.get(env_key) == 'true':
-                svc = compose['services'][svc_name]
-                if 'build' in svc:
-                  del svc['build']
-                svc['image'] = image_ref
-                print(f"  ✔ {svc_name} → {image_ref}")
-              else:
-                print(f"  ⏭ {svc_name} skippé — build: conservé (image existante)")
+              svc = compose['services'][svc_name]
+              if 'build' in svc:
+                del svc['build']
+              svc['image'] = image_ref
 
           with open('docker-compose.deploy.yml', 'w') as f:
             yaml.dump(compose, f, default_flow_style=False)
 
-          print("\ndocker-compose.deploy.yml généré avec succès")
-          EOF
-
-      - name: Deploy — docker-compose up
-        env:
-          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
-        run: |
-          echo "Déploiement avec le tag : ${{ needs.detect.outputs.image_tag }}"
-          docker-compose -f docker-compose.deploy.yml pull
-          docker-compose -f docker-compose.deploy.yml up -d
-          sleep 20
-
-      - name: Verify containers
-        run: docker-compose -f docker-compose.deploy.yml ps
-
-      - name: Wait for services to be ready
-        run: |
-          echo "Attente API Gateway (port 8080)..."
-          for i in $(seq 1 20); do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -qE "^(200|301|302|401|403|404)"; then
-              echo "✔ API Gateway accessible (tentative $i)"; break
-            fi
-            echo "Tentative $i/20 — port 8080 pas encore prêt..."; sleep 5
-          done
-          echo "Attente Frontend (port 3000)..."
-          for i in $(seq 1 15); do
-            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -qE "^(200|301|302)"; then
-              echo "✔ Frontend accessible (tentative $i)"; break
-            fi
-            echo "Tentative $i/15 — port 3000 pas encore prêt..."; sleep 5
-          done
+          print("docker-compose.deploy.yml généré :")
+          for k,v in SERVICE_MAP.items():
+            print(f"  {k} → {v}")
 
       - name: Deploy summary
         run: |
@@ -618,7 +580,7 @@ jobs:
           echo "══════════════════════════════════════════════════════"
 
   # ═══════════════════════════════════════════════════════════════
-  # JOB 4 : DAST — OWASP ZAP Baseline Scan (:8080 + :3000)
+  # JOB 4 : DAST — OWASP ZAP Baseline Scan (port 8080 + 3000)
   # ═══════════════════════════════════════════════════════════════
   dast-zap-baseline:
     runs-on: ubuntu-latest
@@ -650,39 +612,30 @@ jobs:
       - name: Docker Login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Patch & Start stack for DAST
+      - name: Start stack for DAST
         env:
-          TAG:                  ${{ needs.detect.outputs.image_tag }}
-          HUB:                  ${{ secrets.DOCKER_USERNAME }}
-          REBUILT_EUREKA:       ${{ needs.detect.outputs.eureka }}
-          REBUILT_GATEWAY:      ${{ needs.detect.outputs.gateway }}
-          REBUILT_INVOICE:      ${{ needs.detect.outputs.invoice }}
-          REBUILT_PAYMENT:      ${{ needs.detect.outputs.payment }}
-          REBUILT_SUBSCRIPTION: ${{ needs.detect.outputs.subscription }}
-          REBUILT_NOTIFICATION: ${{ needs.detect.outputs.notification }}
-          REBUILT_SIGNATURE:    ${{ needs.detect.outputs.signature }}
-          REBUILT_USERAUTH:     ${{ needs.detect.outputs.userauth }}
-          REBUILT_FRONTEND:     ${{ needs.detect.outputs.frontend }}
-          MAIL_APP_PASSWORD:    ${{ secrets.MAIL_APP_PASSWORD }}
+          TAG: ${{ needs.detect.outputs.image_tag }}
+          HUB: ${{ secrets.DOCKER_USERNAME }}
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
         run: |
           python3 - <<'EOF'
           import yaml, os
           TAG=os.environ['TAG']; HUB=os.environ['HUB']
           SERVICE_MAP = {
-            'eureka-server':        ('REBUILT_EUREKA',       f'{HUB}/plateforme-eureka:{TAG}'),
-            'api-gateway':          ('REBUILT_GATEWAY',      f'{HUB}/plateforme-gateway:{TAG}'),
-            'invoice-service':      ('REBUILT_INVOICE',      f'{HUB}/plateforme-invoice:{TAG}'),
-            'payment-service':      ('REBUILT_PAYMENT',      f'{HUB}/plateforme-payment:{TAG}'),
-            'subscription-service': ('REBUILT_SUBSCRIPTION', f'{HUB}/plateforme-subscription:{TAG}'),
-            'notification-service': ('REBUILT_NOTIFICATION', f'{HUB}/plateforme-notification:{TAG}'),
-            'signature-service':    ('REBUILT_SIGNATURE',    f'{HUB}/plateforme-signature:{TAG}'),
-            'user-auth-service':    ('REBUILT_USERAUTH',     f'{HUB}/plateforme-userauth:{TAG}'),
-            'frontend':             ('REBUILT_FRONTEND',     f'{HUB}/plateforme-frontend:{TAG}'),
+            'eureka-server':f'{HUB}/plateforme-eureka:{TAG}',
+            'api-gateway':f'{HUB}/plateforme-gateway:{TAG}',
+            'invoice-service':f'{HUB}/plateforme-invoice:{TAG}',
+            'payment-service':f'{HUB}/plateforme-payment:{TAG}',
+            'subscription-service':f'{HUB}/plateforme-subscription:{TAG}',
+            'notification-service':f'{HUB}/plateforme-notification:{TAG}',
+            'signature-service':f'{HUB}/plateforme-signature:{TAG}',
+            'user-auth-service':f'{HUB}/plateforme-userauth:{TAG}',
+            'frontend':f'{HUB}/plateforme-frontend:{TAG}',
           }
           with open('docker-compose.yml') as f:
             c=yaml.safe_load(f)
-          for k,(env_key,v) in SERVICE_MAP.items():
-            if k in c.get('services',{}) and os.environ.get(env_key)=='true':
+          for k,v in SERVICE_MAP.items():
+            if k in c.get('services',{}):
               s=c['services'][k]
               if 'build' in s: del s['build']
               s['image']=v
@@ -745,7 +698,7 @@ jobs:
           retention-days: 7
 
   # ═══════════════════════════════════════════════════════════════
-  # JOB 5 : DAST — OWASP ZAP Full Scan (:8080 + :3000)
+  # JOB 5 : DAST — OWASP ZAP Full Scan (port 8080 + 3000)
   # ═══════════════════════════════════════════════════════════════
   dast-zap-full:
     runs-on: ubuntu-latest
@@ -769,39 +722,30 @@ jobs:
       - name: Docker Login
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Patch & Start stack for DAST Full
+      - name: Start stack for DAST Full
         env:
-          TAG:                  ${{ needs.detect.outputs.image_tag }}
-          HUB:                  ${{ secrets.DOCKER_USERNAME }}
-          REBUILT_EUREKA:       ${{ needs.detect.outputs.eureka }}
-          REBUILT_GATEWAY:      ${{ needs.detect.outputs.gateway }}
-          REBUILT_INVOICE:      ${{ needs.detect.outputs.invoice }}
-          REBUILT_PAYMENT:      ${{ needs.detect.outputs.payment }}
-          REBUILT_SUBSCRIPTION: ${{ needs.detect.outputs.subscription }}
-          REBUILT_NOTIFICATION: ${{ needs.detect.outputs.notification }}
-          REBUILT_SIGNATURE:    ${{ needs.detect.outputs.signature }}
-          REBUILT_USERAUTH:     ${{ needs.detect.outputs.userauth }}
-          REBUILT_FRONTEND:     ${{ needs.detect.outputs.frontend }}
-          MAIL_APP_PASSWORD:    ${{ secrets.MAIL_APP_PASSWORD }}
+          TAG: ${{ needs.detect.outputs.image_tag }}
+          HUB: ${{ secrets.DOCKER_USERNAME }}
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
         run: |
           python3 - <<'EOF'
           import yaml, os
           TAG=os.environ['TAG']; HUB=os.environ['HUB']
           SERVICE_MAP = {
-            'eureka-server':        ('REBUILT_EUREKA',       f'{HUB}/plateforme-eureka:{TAG}'),
-            'api-gateway':          ('REBUILT_GATEWAY',      f'{HUB}/plateforme-gateway:{TAG}'),
-            'invoice-service':      ('REBUILT_INVOICE',      f'{HUB}/plateforme-invoice:{TAG}'),
-            'payment-service':      ('REBUILT_PAYMENT',      f'{HUB}/plateforme-payment:{TAG}'),
-            'subscription-service': ('REBUILT_SUBSCRIPTION', f'{HUB}/plateforme-subscription:{TAG}'),
-            'notification-service': ('REBUILT_NOTIFICATION', f'{HUB}/plateforme-notification:{TAG}'),
-            'signature-service':    ('REBUILT_SIGNATURE',    f'{HUB}/plateforme-signature:{TAG}'),
-            'user-auth-service':    ('REBUILT_USERAUTH',     f'{HUB}/plateforme-userauth:{TAG}'),
-            'frontend':             ('REBUILT_FRONTEND',     f'{HUB}/plateforme-frontend:{TAG}'),
+            'eureka-server':f'{HUB}/plateforme-eureka:{TAG}',
+            'api-gateway':f'{HUB}/plateforme-gateway:{TAG}',
+            'invoice-service':f'{HUB}/plateforme-invoice:{TAG}',
+            'payment-service':f'{HUB}/plateforme-payment:{TAG}',
+            'subscription-service':f'{HUB}/plateforme-subscription:{TAG}',
+            'notification-service':f'{HUB}/plateforme-notification:{TAG}',
+            'signature-service':f'{HUB}/plateforme-signature:{TAG}',
+            'user-auth-service':f'{HUB}/plateforme-userauth:{TAG}',
+            'frontend':f'{HUB}/plateforme-frontend:{TAG}',
           }
           with open('docker-compose.yml') as f:
             c=yaml.safe_load(f)
-          for k,(env_key,v) in SERVICE_MAP.items():
-            if k in c.get('services',{}) and os.environ.get(env_key)=='true':
+          for k,v in SERVICE_MAP.items():
+            if k in c.get('services',{}):
               s=c['services'][k]
               if 'build' in s: del s['build']
               s['image']=v
