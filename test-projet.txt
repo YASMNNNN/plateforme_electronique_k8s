@@ -1,0 +1,8 @@
+# Vérifier que le docker-compose.yml est bien là
+ls docker-compose.yml
+
+# Puis tester avec les variables nécessaires
+IMAGE_TAG=local DOCKER_USERNAME=yassmineg docker-compose up -d
+
+# Vérifier
+docker-compose ps
