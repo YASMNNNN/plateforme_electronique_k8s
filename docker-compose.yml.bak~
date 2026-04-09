@@ -5,8 +5,6 @@ services:
   postgresql:
     image: postgres:15-alpine
     container_name: plateforme-db
-    labels:
-      - "monitoring.name=plateforme-db"
     environment:
       POSTGRES_DB: plateforme_electronique
       POSTGRES_USER: plateforme_user
@@ -30,8 +28,6 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:22.0
     container_name: plateforme-keycloak
-    labels:
-      - "monitoring.name=plateforme-keycloak"
     environment:
       KC_HOSTNAME: localhost
       KC_HOSTNAME_PORT: 8081
@@ -64,8 +60,6 @@ services:
   redis:
     image: redis:7-alpine
     container_name: plateforme-redis
-    labels:
-      - "monitoring.name=plateforme-redis"
     ports:
       - "6379:6379"
     networks:
@@ -80,8 +74,6 @@ services:
     build:
       context: ./services/eureka-server
     container_name: plateforme-eureka
-    labels:
-      - "monitoring.name=plateforme-eureka"
     ports:
       - "8761:8761"
     networks:
@@ -93,8 +85,6 @@ services:
     build:
       context: ./services/api-gateway
     container_name: plateforme-gateway
-    labels:
-      - "monitoring.name=plateforme-gateway"
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_PROFILES_ACTIVE: docker
@@ -115,8 +105,6 @@ services:
     build:
       context: ./services/invoice-service
     container_name: plateforme-invoice
-    labels:
-      - "monitoring.name=plateforme-invoice"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -139,8 +127,6 @@ services:
     build:
       context: ./services/signature-service
     container_name: plateforme-signature
-    labels:
-      - "monitoring.name=plateforme-signature"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -155,8 +141,6 @@ services:
     build:
       context: ./services/payment-service
     container_name: plateforme-payment
-    labels:
-      - "monitoring.name=plateforme-payment"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -179,8 +163,6 @@ services:
     build:
       context: ./services/subscription-service
     container_name: plateforme-subscription
-    labels:
-      - "monitoring.name=plateforme-subscription"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -203,8 +185,6 @@ services:
     build:
       context: ./services/notification-service
     container_name: plateforme-notification
-    labels:
-      - "monitoring.name=plateforme-notification"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -232,8 +212,6 @@ services:
     build:
       context: ./services/user-auth-service
     container_name: plateforme-userauth
-    labels:
-      - "monitoring.name=plateforme-userauth"
     environment:
       SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
@@ -258,10 +236,9 @@ services:
 
   # Frontend
   frontend:
-    image: yassmineg/plateforme-frontend:b77f8b8
+    build:
+      context: ./frontend
     container_name: plateforme-frontend
-    labels:
-      - "monitoring.name=plateforme-frontend"
     environment:
       REACT_APP_API_BASE_URL: http://localhost:8080/api
       REACT_APP_KEYCLOAK_URL: http://localhost:8081

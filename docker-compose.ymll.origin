@@ -258,7 +258,8 @@ services:
 
   # Frontend
   frontend:
-    image: yassmineg/plateforme-frontend:b77f8b8
+    build:
+      context: ./frontend
     container_name: plateforme-frontend
     labels:
       - "monitoring.name=plateforme-frontend"

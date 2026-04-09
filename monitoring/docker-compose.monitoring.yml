@@ -52,20 +52,21 @@ services:
   # 2. CADVISOR – métriques containers Docker
   # ----------------------------------------------------------
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     restart: unless-stopped
     privileged: true
     command:                          # ← ajoute ces 3 lignes
       - "--docker_only=true"
       - "--store_container_labels=true"
-      - "--whitelisted_container_labels=com.docker.compose.service"
+      - "--whitelisted_container_labels=monitoring.name"
+      - "--docker=unix:///var/run/docker.sock"
     devices:
       - /dev/kmsg:/dev/kmsg
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro   # ← ajoute cette ligne
+      - /var/run/docker.sock:/var/run/docker.sock:rw   # ← ajoute cette ligne
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
       - /cgroup:/cgroup:ro
