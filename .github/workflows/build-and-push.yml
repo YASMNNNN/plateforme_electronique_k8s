@@ -2,12 +2,12 @@ name: CI/CD — Plateforme Électronique de Paiement
 
 on:
   push:
-    workflow_dispatch:
-       branches:
+    branches:
       - main
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 
 permissions:
