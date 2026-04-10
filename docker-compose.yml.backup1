@@ -60,7 +60,7 @@ services:
       - --http-port=8080
     restart: unless-stopped
 
-  # Redis
+  # Redis for caching and rate limiting
   redis:
     image: redis:7-alpine
     container_name: plateforme-redis
@@ -77,7 +77,8 @@ services:
 
   # Eureka Service Registry
   eureka-server:
-    image: yassmineg/plateforme-eureka:aad0d6e
+    build:
+      context: ./services/eureka-server
     container_name: plateforme-eureka
     labels:
       - "monitoring.name=plateforme-eureka"
@@ -89,7 +90,8 @@ services:
 
   # API Gateway
   api-gateway:
-    image: yassmineg/plateforme-gateway:aad0d6e
+    build:
+      context: ./services/api-gateway
     container_name: plateforme-gateway
     labels:
       - "monitoring.name=plateforme-gateway"
@@ -110,7 +112,8 @@ services:
 
   # Invoice Service
   invoice-service:
-    image: yassmineg/plateforme-invoice:aad0d6e
+    build:
+      context: ./services/invoice-service
     container_name: plateforme-invoice
     labels:
       - "monitoring.name=plateforme-invoice"
@@ -133,7 +136,8 @@ services:
 
   # Signature Service
   signature-service:
-    image: yassmineg/plateforme-signature:aad0d6e
+    build:
+      context: ./services/signature-service
     container_name: plateforme-signature
     labels:
       - "monitoring.name=plateforme-signature"
@@ -148,7 +152,8 @@ services:
 
   # Payment Service
   payment-service:
-    image: yassmineg/plateforme-payment:aad0d6e
+    build:
+      context: ./services/payment-service
     container_name: plateforme-payment
     labels:
       - "monitoring.name=plateforme-payment"
@@ -171,7 +176,8 @@ services:
 
   # Subscription Service
   subscription-service:
-    image: yassmineg/plateforme-subscription:aad0d6e
+    build:
+      context: ./services/subscription-service
     container_name: plateforme-subscription
     labels:
       - "monitoring.name=plateforme-subscription"
@@ -194,7 +200,8 @@ services:
 
   # Notification Service
   notification-service:
-    image: yassmineg/plateforme-notification:aad0d6e
+    build:
+      context: ./services/notification-service
     container_name: plateforme-notification
     labels:
       - "monitoring.name=plateforme-notification"
@@ -222,7 +229,8 @@ services:
 
   # User Auth Service
   user-auth-service:
-    image: yassmineg/plateforme-userauth:aad0d6e
+    build:
+      context: ./services/user-auth-service
     container_name: plateforme-userauth
     labels:
       - "monitoring.name=plateforme-userauth"
@@ -250,7 +258,7 @@ services:
 
   # Frontend
   frontend:
-    image: yassmineg/plateforme-frontend:aad0d6e
+    image: yassmineg/plateforme-frontend:b77f8b8
     container_name: plateforme-frontend
     labels:
       - "monitoring.name=plateforme-frontend"
