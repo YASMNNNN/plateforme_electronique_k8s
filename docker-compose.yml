@@ -250,7 +250,7 @@ services:
 
   # Frontend
   frontend:
-    image: yassmineg/plateforme-frontend:aad0d6e
+    image: yassmineg/plateforme-frontend:f275d63
     container_name: plateforme-frontend
     labels:
       - "monitoring.name=plateforme-frontend"
