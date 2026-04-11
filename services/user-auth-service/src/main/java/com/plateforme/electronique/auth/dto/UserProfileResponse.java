@@ -16,4 +16,5 @@ public class UserProfileResponse {
     private String taxId;
     private String role;
     private boolean active;
+    private boolean totpEnabled;
 }

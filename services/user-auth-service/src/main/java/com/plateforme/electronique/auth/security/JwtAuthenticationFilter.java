@@ -37,6 +37,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             try {
                 Jws<Claims> claims = jwtService.parse(token);
+                if (!JwtService.TOKEN_TYPE_ACCESS.equals(jwtService.tokenType(claims.getBody()))) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 String email = claims.getBody().getSubject();
                 userRepository.findByEmail(email).ifPresent(user -> {
                     if (user.isActive()) {

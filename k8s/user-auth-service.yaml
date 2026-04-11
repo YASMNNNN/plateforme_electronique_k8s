@@ -52,6 +52,13 @@ spec:
             secretKeyRef:
               name: plateforme-secrets
               key: KEYCLOAK_CLIENT_SECRET
+        - name: MFA_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: plateforme-secrets
+              key: MFA_ENCRYPTION_KEY
+        - name: MFA_ISSUER
+          value: "Plateforme Electronique"
         livenessProbe:
           httpGet:
             path: /actuator/health

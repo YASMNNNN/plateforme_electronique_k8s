@@ -83,9 +83,27 @@ export type NotificationPreferences = {
 /* ── Auth ── */
 
 export type AuthResponse = {
-  accessToken: string;
-  refreshToken: string;
-  expiresInSeconds: number;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresInSeconds?: number;
+  mfaRequired?: boolean;
+  mfaToken?: string;
+  mfaExpiresInSeconds?: number;
+};
+
+export type MfaVerifyPayload = {
+  mfaToken: string;
+  code: string;
+};
+
+export type TotpSetupResponse = {
+  secret: string;
+  otpAuthUri: string;
+  qrCodeDataUri: string;
+};
+
+export type RecoveryCodesResponse = {
+  recoveryCodes: string[];
 };
 
 export type LoginPayload = {
@@ -116,6 +134,7 @@ export type UserProfile = {
   taxId?: string;
   role: string;
   active: boolean;
+  totpEnabled?: boolean;
 };
 
 export type UpdateUserPayload = {

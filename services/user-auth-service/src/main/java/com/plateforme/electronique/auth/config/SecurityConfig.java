@@ -21,6 +21,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/2fa/setup",
+                                         "/api/auth/2fa/enable",
+                                         "/api/auth/2fa/disable",
+                                         "/api/auth/2fa/recovery-codes/**").authenticated()
                         .requestMatchers("/api/auth/**", "/api/merchants", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .requestMatchers("/api/users/**", "/api/merchants/**").authenticated()
                         .anyRequest().authenticated()

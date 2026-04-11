@@ -24,3 +24,19 @@ security:
   jwt:
     secret: ${JWT_SECRET:change-this-secret-change-this-secret}
     access-token-seconds: 3600
+  mfa:
+    issuer: ${MFA_ISSUER:Plateforme Electronique}
+    pending-token-seconds: 180
+    encryption-key: ${MFA_ENCRYPTION_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

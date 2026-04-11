@@ -11,12 +11,15 @@ import type {
   InvoiceStatus,
   LoginPayload,
   MerchantInvoiceStats,
+  MfaVerifyPayload,
   Notification,
   NotificationPreferences,
   Payment,
   Plan,
+  RecoveryCodesResponse,
   RegisterPayload,
   Subscription,
+  TotpSetupResponse,
   UpdateUserPayload,
   UserPage,
   UserProfile,
@@ -32,6 +35,7 @@ export type {
   Invoice,
   InvoicePage,
   LoginPayload,
+  MfaVerifyPayload,
   PaymentStatus,
   Payment,
   NotificationPreferences,
@@ -50,6 +54,8 @@ export type {
   NotificationType,
   CreateNotificationRequest,
   MerchantInvoiceStats,
+  TotpSetupResponse,
+  RecoveryCodesResponse,
 } from './types';
 
 const rawBase =
@@ -102,6 +108,38 @@ export const loginUser = async (payload: LoginPayload): Promise<AuthResponse> =>
   return apiFetch<AuthResponse>('/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+};
+
+export const verifyMfaCode = async (payload: MfaVerifyPayload): Promise<AuthResponse> => {
+  return apiFetch<AuthResponse>('/api/auth/2fa/verify', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const setupTotp = async (): Promise<TotpSetupResponse> => {
+  return apiFetch<TotpSetupResponse>('/api/auth/2fa/setup', { method: 'POST' });
+};
+
+export const enableTotp = async (code: string): Promise<RecoveryCodesResponse> => {
+  return apiFetch<RecoveryCodesResponse>('/api/auth/2fa/enable', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  });
+};
+
+export const disableTotp = async (password: string, code: string): Promise<void> => {
+  return apiFetch<void>('/api/auth/2fa/disable', {
+    method: 'POST',
+    body: JSON.stringify({ password, code }),
+  });
+};
+
+export const regenerateRecoveryCodes = async (code: string): Promise<RecoveryCodesResponse> => {
+  return apiFetch<RecoveryCodesResponse>('/api/auth/2fa/recovery-codes/regenerate', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
   });
 };
 

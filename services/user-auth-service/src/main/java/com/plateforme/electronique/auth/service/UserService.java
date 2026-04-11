@@ -108,6 +108,7 @@ public class UserService {
                 .taxId(user.getTaxId())
                 .role(user.getRole().name())
                 .active(user.isActive())
+                .totpEnabled(user.isTotpEnabled())
                 .build();
     }
 }

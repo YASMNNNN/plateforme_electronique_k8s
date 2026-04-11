@@ -64,6 +64,18 @@
             <artifactId>keycloak-spring-boot-starter</artifactId>
             <version>22.0.1</version>
         </dependency>
+        <!-- TOTP (Google Authenticator compatible) + QR generation -->
+        <dependency>
+            <groupId>dev.samstevens.totp</groupId>
+            <artifactId>totp</artifactId>
+            <version>1.7.1</version>
+        </dependency>
+        <!-- Rate limiting for auth endpoints -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j-core</artifactId>
+            <version>8.10.1</version>
+        </dependency>
         <!-- JWT tokens -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

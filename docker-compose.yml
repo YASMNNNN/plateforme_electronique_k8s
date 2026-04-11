@@ -237,6 +237,10 @@ services:
       KEYCLOAK_REALM: plateforme-electronique
       KEYCLOAK_RESOURCE: user-auth-service
       KEYCLOAK_CREDENTIALS_SECRET: platform-secret
+      # 2FA — base64-encoded 32-byte AES-256 key. MUST be overridden in production.
+      # Rotating this value invalidates every enrolled TOTP secret.
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-ZGV2LW9ubHktMzItYnl0ZS1rZXktZG8tbm90LXVzZS1wcm9kcw==}
+      MFA_ISSUER: ${MFA_ISSUER:-Plateforme Electronique}
     networks:
       - plateforme-network
     depends_on:
