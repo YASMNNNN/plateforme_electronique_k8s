@@ -1,0 +1,933 @@
+name: CI/CD — Plateforme Électronique de Paiement
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  security-events: write
+  issues: write
+
+jobs:
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 0 : DETECT
+  # ═══════════════════════════════════════════════════════════════
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag:          ${{ steps.tag.outputs.image_tag }}
+      eureka:             ${{ steps.changes.outputs.eureka }}
+      gateway:            ${{ steps.changes.outputs.gateway }}
+      invoice:            ${{ steps.changes.outputs.invoice }}
+      payment:            ${{ steps.changes.outputs.payment }}
+      subscription:       ${{ steps.changes.outputs.subscription }}
+      notification:       ${{ steps.changes.outputs.notification }}
+      signature:          ${{ steps.changes.outputs.signature }}
+      userauth:           ${{ steps.changes.outputs.userauth }}
+      frontend:           ${{ steps.changes.outputs.frontend }}
+      any_rebuild:        ${{ steps.changes.outputs.any_rebuild }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Compute SHORT_SHA tag
+        id: tag
+        run: |
+          SHORT_SHA=${GITHUB_SHA::7}
+          echo "image_tag=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "Tag généré : $SHORT_SHA"
+
+      - name: Detect per-service changes
+        id: changes
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "➜ Premier commit → rebuild complet"
+            for svc in eureka gateway invoice payment subscription notification signature userauth frontend; do
+              echo "${svc}=true" >> $GITHUB_OUTPUT
+            done
+            echo "any_rebuild=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only $BEFORE $AFTER)
+          echo "Fichiers modifiés :"
+          echo "$CHANGED"
+
+          ANY=false
+          detect() {
+            local key=$1; local pattern=$2
+            if echo "$CHANGED" | grep -qE "^${pattern}"; then
+              echo "${key}=true"  >> $GITHUB_OUTPUT
+              echo "  ✔ ${key} modifié"
+              ANY=true
+            else
+              echo "${key}=false" >> $GITHUB_OUTPUT
+            fi
+          }
+
+          detect eureka        "services/eureka-server/"
+          detect gateway       "services/api-gateway/"
+          detect invoice       "services/invoice-service/"
+          detect payment       "services/payment-service/"
+          detect subscription  "services/subscription-service/"
+          detect notification  "services/notification-service/"
+          detect signature     "services/signature-service/"
+          detect userauth      "services/user-auth-service/"
+          detect frontend      "frontend/"
+
+          if [ "$ANY" = "true" ]; then
+            echo "any_rebuild=true"  >> $GITHUB_OUTPUT
+          else
+            echo "any_rebuild=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 1 : BUILD & PUSH
+  # ═══════════════════════════════════════════════════════════════
+
+  build-eureka:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.eureka == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push eureka-server
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-eureka:$TAG ./services/eureka-server
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-eureka:$TAG
+      - name: Trivy — scan eureka (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-eureka:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-eureka.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — eureka
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-eureka.sarif
+          category: trivy-eureka
+        continue-on-error: true
+      - name: Trivy — rapport console eureka
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-eureka:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-gateway:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.gateway == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push api-gateway
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-gateway:$TAG ./services/api-gateway
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-gateway:$TAG
+      - name: Trivy — scan gateway (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-gateway:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-gateway.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — gateway
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-gateway.sarif
+          category: trivy-gateway
+        continue-on-error: true
+      - name: Trivy — rapport console gateway
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-gateway:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-invoice:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.invoice == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push invoice-service
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-invoice:$TAG ./services/invoice-service
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-invoice:$TAG
+      - name: Trivy — scan invoice (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-invoice:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-invoice.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — invoice
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-invoice.sarif
+          category: trivy-invoice
+        continue-on-error: true
+      - name: Trivy — rapport console invoice
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-invoice:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-payment:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.payment == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push payment-service
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-payment:$TAG ./services/payment-service
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-payment:$TAG
+      - name: Trivy — scan payment (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-payment:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-payment.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — payment
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-payment.sarif
+          category: trivy-payment
+        continue-on-error: true
+      - name: Trivy — rapport console payment
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-payment:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-subscription:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.subscription == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push subscription-service
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-subscription:$TAG ./services/subscription-service
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-subscription:$TAG
+      - name: Trivy — scan subscription (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-subscription:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-subscription.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — subscription
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-subscription.sarif
+          category: trivy-subscription
+        continue-on-error: true
+      - name: Trivy — rapport console subscription
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-subscription:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-notification:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.notification == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push notification-service
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-notification:$TAG ./services/notification-service
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-notification:$TAG
+      - name: Trivy — scan notification (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-notification:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-notification.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — notification
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-notification.sarif
+          category: trivy-notification
+        continue-on-error: true
+      - name: Trivy — rapport console notification
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-notification:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-signature:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.signature == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push signature-service
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-signature:$TAG ./services/signature-service
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-signature:$TAG
+      - name: Trivy — scan signature (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-signature:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-signature.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — signature
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-signature.sarif
+          category: trivy-signature
+        continue-on-error: true
+      - name: Trivy — rapport console signature
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-signature:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-userauth:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.userauth == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push user-auth-service
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-userauth:$TAG ./services/user-auth-service
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-userauth:$TAG
+      - name: Trivy — scan userauth (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-userauth:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-userauth.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — userauth
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-userauth.sarif
+          category: trivy-userauth
+        continue-on-error: true
+      - name: Trivy — rapport console userauth
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-userauth:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.frontend == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Build & Push frontend
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/plateforme-frontend:$TAG ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/plateforme-frontend:$TAG
+      - name: Trivy — scan frontend (SARIF)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-frontend:${{ needs.detect.outputs.image_tag }}"
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+      - name: Upload Trivy SARIF — frontend
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+        continue-on-error: true
+      - name: Trivy — rapport console frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "${{ secrets.DOCKER_USERNAME }}/plateforme-frontend:${{ needs.detect.outputs.image_tag }}"
+          format: table
+          severity: "CRITICAL,HIGH"
+          exit-code: "0"
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 2 : SAST — Semgrep
+  # ═══════════════════════════════════════════════════════════════
+  sast-code:
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.any_rebuild == 'true'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Semgrep CLI
+        run: pip install semgrep --break-system-packages
+      - name: Run Semgrep — génération SARIF locale (sans token)
+        run: |
+          semgrep scan \
+            --config "p/owasp-top-ten" \
+            --config "p/secrets" \
+            --config "p/docker" \
+            --config "p/java" \
+            --config "p/javascript" \
+            --sarif \
+            --output semgrep.sarif \
+            . || true
+          ls -lh semgrep.sarif 2>/dev/null || echo "⚠ semgrep.sarif absent"
+      - name: Fallback — SARIF vide si Semgrep n'a rien produit
+        if: always()
+        run: |
+          if [ ! -f semgrep.sarif ]; then
+            echo '{"version":"2.1.0","$schema":"https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json","runs":[]}' > semgrep.sarif
+          fi
+      - name: Upload Semgrep SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+        continue-on-error: true
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 3 : DEPLOY
+  # ═══════════════════════════════════════════════════════════════
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - build-eureka
+      - build-gateway
+      - build-invoice
+      - build-payment
+      - build-subscription
+      - build-notification
+      - build-signature
+      - build-userauth
+      - build-frontend
+    if: |
+      always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
+      !contains(needs.*.result, 'failure')
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Patch docker-compose.yml — injecter les tags d'image (conditionnel)
+        env:
+          TAG:                  ${{ needs.detect.outputs.image_tag }}
+          HUB:                  ${{ secrets.DOCKER_USERNAME }}
+          REBUILT_EUREKA:       ${{ needs.detect.outputs.eureka }}
+          REBUILT_GATEWAY:      ${{ needs.detect.outputs.gateway }}
+          REBUILT_INVOICE:      ${{ needs.detect.outputs.invoice }}
+          REBUILT_PAYMENT:      ${{ needs.detect.outputs.payment }}
+          REBUILT_SUBSCRIPTION: ${{ needs.detect.outputs.subscription }}
+          REBUILT_NOTIFICATION: ${{ needs.detect.outputs.notification }}
+          REBUILT_SIGNATURE:    ${{ needs.detect.outputs.signature }}
+          REBUILT_USERAUTH:     ${{ needs.detect.outputs.userauth }}
+          REBUILT_FRONTEND:     ${{ needs.detect.outputs.frontend }}
+        run: |
+          python3 - <<'EOF'
+          import yaml, os
+
+          TAG = os.environ['TAG']
+          HUB = os.environ['HUB']
+
+          SERVICE_MAP = {
+            'eureka-server':        ('REBUILT_EUREKA',       f'{HUB}/plateforme-eureka:{TAG}'),
+            'api-gateway':          ('REBUILT_GATEWAY',      f'{HUB}/plateforme-gateway:{TAG}'),
+            'invoice-service':      ('REBUILT_INVOICE',      f'{HUB}/plateforme-invoice:{TAG}'),
+            'payment-service':      ('REBUILT_PAYMENT',      f'{HUB}/plateforme-payment:{TAG}'),
+            'subscription-service': ('REBUILT_SUBSCRIPTION', f'{HUB}/plateforme-subscription:{TAG}'),
+            'notification-service': ('REBUILT_NOTIFICATION', f'{HUB}/plateforme-notification:{TAG}'),
+            'signature-service':    ('REBUILT_SIGNATURE',    f'{HUB}/plateforme-signature:{TAG}'),
+            'user-auth-service':    ('REBUILT_USERAUTH',     f'{HUB}/plateforme-userauth:{TAG}'),
+            'frontend':             ('REBUILT_FRONTEND',     f'{HUB}/plateforme-frontend:{TAG}'),
+          }
+
+          with open('docker-compose.yml') as f:
+            compose = yaml.safe_load(f)
+
+          for svc_name, (env_key, image_ref) in SERVICE_MAP.items():
+            if svc_name in compose.get('services', {}):
+              if os.environ.get(env_key) == 'true':
+                svc = compose['services'][svc_name]
+                if 'build' in svc:
+                  del svc['build']
+                svc['image'] = image_ref
+                print(f"  ✔ {svc_name} → {image_ref}")
+              else:
+                print(f"  ⏭ {svc_name} skippé — build: conservé (image existante)")
+
+          with open('docker-compose.deploy.yml', 'w') as f:
+            yaml.dump(compose, f, default_flow_style=False)
+
+          print("\ndocker-compose.deploy.yml généré avec succès")
+          EOF
+
+      - name: Fix PostgreSQL healthcheck pour CI
+        run: |
+          python3 - <<'EOF'
+          import yaml
+
+          with open('docker-compose.deploy.yml') as f:
+            c = yaml.safe_load(f)
+
+          if 'postgresql' in c.get('services', {}):
+            c['services']['postgresql']['healthcheck'] = {
+              'test': ['CMD-SHELL', 'pg_isready -U plateforme_user -d plateforme_electronique'],
+              'interval': '10s',
+              'timeout': '10s',
+              'retries': 10,
+              'start_period': '30s'
+            }
+            print("✔ Healthcheck PostgreSQL assoupli pour CI")
+
+          with open('docker-compose.deploy.yml', 'w') as f:
+            yaml.dump(c, f, default_flow_style=False)
+          EOF
+
+      - name: Deploy — docker-compose up
+        env:
+          MAIL_APP_PASSWORD: ${{ secrets.MAIL_APP_PASSWORD }}
+        run: |
+          echo "Déploiement avec le tag : ${{ needs.detect.outputs.image_tag }}"
+          docker-compose -f docker-compose.deploy.yml pull
+          docker-compose -f docker-compose.deploy.yml up -d
+          sleep 40
+
+      - name: Verify containers
+        run: docker-compose -f docker-compose.deploy.yml ps
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Attente API Gateway (port 8080)..."
+          for i in $(seq 1 20); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -qE "^(200|301|302|401|403|404)"; then
+              echo "✔ API Gateway accessible (tentative $i)"; break
+            fi
+            echo "Tentative $i/20 — port 8080 pas encore prêt..."; sleep 5
+          done
+          echo "Attente Frontend (port 3000)..."
+          for i in $(seq 1 15); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -qE "^(200|301|302)"; then
+              echo "✔ Frontend accessible (tentative $i)"; break
+            fi
+            echo "Tentative $i/15 — port 3000 pas encore prêt..."; sleep 5
+          done
+
+      - name: Deploy summary
+        run: |
+          echo "══════════════════════════════════════════════════════"
+          echo "  Plateforme déployée — tag : ${{ needs.detect.outputs.image_tag }}"
+          echo "  API Gateway  → http://localhost:8080"
+          echo "  Frontend     → http://localhost:3000"
+          echo "══════════════════════════════════════════════════════"
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 4 : DAST — OWASP ZAP Baseline Scan
+  # ═══════════════════════════════════════════════════════════════
+  dast-zap-baseline:
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - build-eureka
+      - build-gateway
+      - build-invoice
+      - build-payment
+      - build-subscription
+      - build-notification
+      - build-signature
+      - build-userauth
+      - build-frontend
+    if: |
+      always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
+      !contains(needs.*.result, 'failure')
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Patch & Start stack for DAST
+        env:
+          TAG:                  ${{ needs.detect.outputs.image_tag }}
+          HUB:                  ${{ secrets.DOCKER_USERNAME }}
+          REBUILT_EUREKA:       ${{ needs.detect.outputs.eureka }}
+          REBUILT_GATEWAY:      ${{ needs.detect.outputs.gateway }}
+          REBUILT_INVOICE:      ${{ needs.detect.outputs.invoice }}
+          REBUILT_PAYMENT:      ${{ needs.detect.outputs.payment }}
+          REBUILT_SUBSCRIPTION: ${{ needs.detect.outputs.subscription }}
+          REBUILT_NOTIFICATION: ${{ needs.detect.outputs.notification }}
+          REBUILT_SIGNATURE:    ${{ needs.detect.outputs.signature }}
+          REBUILT_USERAUTH:     ${{ needs.detect.outputs.userauth }}
+          REBUILT_FRONTEND:     ${{ needs.detect.outputs.frontend }}
+          MAIL_APP_PASSWORD:    ${{ secrets.MAIL_APP_PASSWORD }}
+        run: |
+          python3 - <<'EOF'
+          import yaml, os
+          TAG=os.environ['TAG']; HUB=os.environ['HUB']
+          SERVICE_MAP = {
+            'eureka-server':        ('REBUILT_EUREKA',       f'{HUB}/plateforme-eureka:{TAG}'),
+            'api-gateway':          ('REBUILT_GATEWAY',      f'{HUB}/plateforme-gateway:{TAG}'),
+            'invoice-service':      ('REBUILT_INVOICE',      f'{HUB}/plateforme-invoice:{TAG}'),
+            'payment-service':      ('REBUILT_PAYMENT',      f'{HUB}/plateforme-payment:{TAG}'),
+            'subscription-service': ('REBUILT_SUBSCRIPTION', f'{HUB}/plateforme-subscription:{TAG}'),
+            'notification-service': ('REBUILT_NOTIFICATION', f'{HUB}/plateforme-notification:{TAG}'),
+            'signature-service':    ('REBUILT_SIGNATURE',    f'{HUB}/plateforme-signature:{TAG}'),
+            'user-auth-service':    ('REBUILT_USERAUTH',     f'{HUB}/plateforme-userauth:{TAG}'),
+            'frontend':             ('REBUILT_FRONTEND',     f'{HUB}/plateforme-frontend:{TAG}'),
+          }
+          with open('docker-compose.yml') as f:
+            c=yaml.safe_load(f)
+          for k,(env_key,v) in SERVICE_MAP.items():
+            if k in c.get('services',{}) and os.environ.get(env_key)=='true':
+              s=c['services'][k]
+              if 'build' in s: del s['build']
+              s['image']=v
+          if 'postgresql' in c.get('services', {}):
+            c['services']['postgresql']['healthcheck'] = {
+              'test': ['CMD-SHELL', 'pg_isready -U plateforme_user -d plateforme_electronique'],
+              'interval': '10s', 'timeout': '10s', 'retries': 10, 'start_period': '30s'
+            }
+          with open('docker-compose.deploy.yml','w') as f:
+            yaml.dump(c,f,default_flow_style=False)
+          EOF
+          docker-compose -f docker-compose.deploy.yml pull
+          docker-compose -f docker-compose.deploy.yml up -d
+          echo "Stack démarrée — attente 40s..."
+          sleep 40
+
+      - name: Wait for API Gateway (8080)
+        run: |
+          for i in $(seq 1 20); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -qE "^(200|301|302|401|403|404)"; then
+              echo "✔ API Gateway prêt"; break
+            fi
+            echo "Tentative $i/20..."; sleep 5
+          done
+
+      - name: Wait for Frontend (3000)
+        run: |
+          for i in $(seq 1 15); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -qE "^(200|301|302)"; then
+              echo "✔ Frontend prêt"; break
+            fi
+            echo "Tentative $i/15..."; sleep 5
+          done
+
+      - name: OWASP ZAP — Baseline Scan API Gateway (8080)
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "http://localhost:8080"
+          cmd_options: "-I"
+          artifact_name: "zap-baseline-gateway"
+        continue-on-error: true
+
+      - name: Upload ZAP Baseline report — Gateway
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-report-gateway
+          path: report_html.html
+          retention-days: 7
+
+      - name: OWASP ZAP — Baseline Scan Frontend (3000)
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: "http://localhost:3000"
+          cmd_options: "-I"
+          artifact_name: "zap-baseline-frontend"
+        continue-on-error: true
+
+      - name: Upload ZAP Baseline report — Frontend
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-baseline-report-frontend
+          path: report_html.html
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 5 : DAST — OWASP ZAP Full Scan
+  # ═══════════════════════════════════════════════════════════════
+  dast-zap-full:
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - dast-zap-baseline
+    if: |
+      always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
+      needs.dast-zap-baseline.result != 'failure'
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+            -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Patch & Start stack for DAST Full
+        env:
+          TAG:                  ${{ needs.detect.outputs.image_tag }}
+          HUB:                  ${{ secrets.DOCKER_USERNAME }}
+          REBUILT_EUREKA:       ${{ needs.detect.outputs.eureka }}
+          REBUILT_GATEWAY:      ${{ needs.detect.outputs.gateway }}
+          REBUILT_INVOICE:      ${{ needs.detect.outputs.invoice }}
+          REBUILT_PAYMENT:      ${{ needs.detect.outputs.payment }}
+          REBUILT_SUBSCRIPTION: ${{ needs.detect.outputs.subscription }}
+          REBUILT_NOTIFICATION: ${{ needs.detect.outputs.notification }}
+          REBUILT_SIGNATURE:    ${{ needs.detect.outputs.signature }}
+          REBUILT_USERAUTH:     ${{ needs.detect.outputs.userauth }}
+          REBUILT_FRONTEND:     ${{ needs.detect.outputs.frontend }}
+          MAIL_APP_PASSWORD:    ${{ secrets.MAIL_APP_PASSWORD }}
+        run: |
+          python3 - <<'EOF'
+          import yaml, os
+          TAG=os.environ['TAG']; HUB=os.environ['HUB']
+          SERVICE_MAP = {
+            'eureka-server':        ('REBUILT_EUREKA',       f'{HUB}/plateforme-eureka:{TAG}'),
+            'api-gateway':          ('REBUILT_GATEWAY',      f'{HUB}/plateforme-gateway:{TAG}'),
+            'invoice-service':      ('REBUILT_INVOICE',      f'{HUB}/plateforme-invoice:{TAG}'),
+            'payment-service':      ('REBUILT_PAYMENT',      f'{HUB}/plateforme-payment:{TAG}'),
+            'subscription-service': ('REBUILT_SUBSCRIPTION', f'{HUB}/plateforme-subscription:{TAG}'),
+            'notification-service': ('REBUILT_NOTIFICATION', f'{HUB}/plateforme-notification:{TAG}'),
+            'signature-service':    ('REBUILT_SIGNATURE',    f'{HUB}/plateforme-signature:{TAG}'),
+            'user-auth-service':    ('REBUILT_USERAUTH',     f'{HUB}/plateforme-userauth:{TAG}'),
+            'frontend':             ('REBUILT_FRONTEND',     f'{HUB}/plateforme-frontend:{TAG}'),
+          }
+          with open('docker-compose.yml') as f:
+            c=yaml.safe_load(f)
+          for k,(env_key,v) in SERVICE_MAP.items():
+            if k in c.get('services',{}) and os.environ.get(env_key)=='true':
+              s=c['services'][k]
+              if 'build' in s: del s['build']
+              s['image']=v
+          if 'postgresql' in c.get('services', {}):
+            c['services']['postgresql']['healthcheck'] = {
+              'test': ['CMD-SHELL', 'pg_isready -U plateforme_user -d plateforme_electronique'],
+              'interval': '10s', 'timeout': '10s', 'retries': 10, 'start_period': '30s'
+            }
+          with open('docker-compose.deploy.yml','w') as f:
+            yaml.dump(c,f,default_flow_style=False)
+          EOF
+          docker-compose -f docker-compose.deploy.yml pull
+          docker-compose -f docker-compose.deploy.yml up -d
+          echo "Stack démarrée — attente 40s..."
+          sleep 40
+
+      - name: Wait for API Gateway (8080)
+        run: |
+          for i in $(seq 1 20); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:8080 | grep -qE "^(200|301|302|401|403|404)"; then
+              echo "✔ API Gateway prêt"; break
+            fi
+            echo "Tentative $i/20..."; sleep 5
+          done
+
+      - name: Wait for Frontend (3000)
+        run: |
+          for i in $(seq 1 15); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 | grep -qE "^(200|301|302)"; then
+              echo "✔ Frontend prêt"; break
+            fi
+            echo "Tentative $i/15..."; sleep 5
+          done
+
+      - name: OWASP ZAP — Full Scan API Gateway (8080)
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: "http://localhost:8080"
+          cmd_options: "-I"
+          artifact_name: "zap-full-gateway"
+        continue-on-error: true
+
+      - name: Upload ZAP Full report HTML — Gateway
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-full-report-gateway-html
+          path: report_html.html
+          retention-days: 7
+
+      - name: Upload ZAP Full report JSON — Gateway
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-full-report-gateway-json
+          path: report_json.json
+          retention-days: 7
+
+      - name: OWASP ZAP — Full Scan Frontend (3000)
+        uses: zaproxy/action-full-scan@v0.12.0
+        with:
+          target: "http://localhost:3000"
+          cmd_options: "-I"
+          artifact_name: "zap-full-frontend"
+        continue-on-error: true
+
+      - name: Upload ZAP Full report HTML — Frontend
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-full-report-frontend-html
+          path: report_html.html
+          retention-days: 7
+
+      - name: Upload ZAP Full report JSON — Frontend
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-full-report-frontend-json
+          path: report_json.json
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 6 : UPDATE K8S REPO — mettre à jour le tag chez islem
+  # ═══════════════════════════════════════════════════════════════
+  update-k8s-manifests:
+    runs-on: ubuntu-latest
+    needs:
+      - detect
+      - build-eureka
+      - build-gateway
+      - build-invoice
+      - build-payment
+      - build-subscription
+      - build-notification
+      - build-signature
+      - build-userauth
+      - build-frontend
+    if: |
+      always() &&
+      needs.detect.outputs.any_rebuild == 'true' &&
+      !contains(needs.*.result, 'failure')
+    steps:
+      - name: Clone repo islem
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_TOKEN_ISLEM }}@github.com/islem2246/plateforme-k8s-manifests-EKS.git
+
+      - name: Mettre à jour les tags
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          cd plateforme-k8s-manifests-EKS
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-eureka:.*|yassmineg/plateforme-eureka:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-gateway:.*|yassmineg/plateforme-gateway:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-invoice:.*|yassmineg/plateforme-invoice:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-payment:.*|yassmineg/plateforme-payment:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-subscription:.*|yassmineg/plateforme-subscription:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-notification:.*|yassmineg/plateforme-notification:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-signature:.*|yassmineg/plateforme-signature:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-userauth:.*|yassmineg/plateforme-userauth:$TAG|g"
+          find . -name "*.yaml" | xargs sed -i "s|yassmineg/plateforme-frontend:.*|yassmineg/plateforme-frontend:$TAG|g"
+
+      - name: Commit et Push vers repo islem
+        run: |
+          TAG=${{ needs.detect.outputs.image_tag }}
+          cd plateforme-k8s-manifests-EKS
+          git config user.email "pipeline@github.com"
+          git config user.name "CI Pipeline"
+          git add .
+          git diff --staged --quiet || git commit -m "ci: update image tags to $TAG"
+          git push
