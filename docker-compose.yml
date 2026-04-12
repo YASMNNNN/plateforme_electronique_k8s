@@ -89,7 +89,7 @@ services:
 
   # API Gateway
   api-gateway:
-    image: yassmineg/plateforme-gateway:aad0d6e
+    image: yassmineg/plateforme-gateway:latest
     container_name: plateforme-gateway
     labels:
       - "monitoring.name=plateforme-gateway"
@@ -222,7 +222,7 @@ services:
 
   # User Auth Service
   user-auth-service:
-    image: yassmineg/plateforme-userauth:aad0d6e
+    image: yassmineg/plateforme-userauth:latest
     container_name: plateforme-userauth
     labels:
       - "monitoring.name=plateforme-userauth"
@@ -239,7 +239,7 @@ services:
       KEYCLOAK_CREDENTIALS_SECRET: platform-secret
       # 2FA — base64-encoded 32-byte AES-256 key. MUST be overridden in production.
       # Rotating this value invalidates every enrolled TOTP secret.
-      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-ZGV2LW9ubHktMzItYnl0ZS1rZXktZG8tbm90LXVzZS1wcm9kcw==}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-ZGV2LW9ubHktMzItYnl0ZS1rZXktZG8tbm90LXVzZSE=}
       MFA_ISSUER: ${MFA_ISSUER:-Plateforme Electronique}
     networks:
       - plateforme-network
@@ -254,7 +254,7 @@ services:
 
   # Frontend
   frontend:
-    image: yassmineg/plateforme-frontend:f275d63
+    image: yassmineg/plateforme-frontend:latest
     container_name: plateforme-frontend
     labels:
       - "monitoring.name=plateforme-frontend"

@@ -1,0 +1,2 @@
+compresser: tar cvzf backup.tar.gz  backup_bd
+décompresser: tar xf backup.tar.gz

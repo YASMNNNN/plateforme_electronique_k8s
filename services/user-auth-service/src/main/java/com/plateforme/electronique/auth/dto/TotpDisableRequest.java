@@ -7,5 +7,6 @@ import lombok.Data;
 public class TotpDisableRequest {
     @NotBlank
     private String password;
+    @NotBlank
     private String code;
 }

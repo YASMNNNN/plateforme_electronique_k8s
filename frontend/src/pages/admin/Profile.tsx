@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateUser, deleteUser, changePassword } from '../../api/gateway';
 import type { UpdateUserPayload } from '../../api/gateway';
+import TwoFactorCard from '../../components/TwoFactorCard';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Profile = () => {
@@ -199,6 +200,9 @@ const Profile = () => {
           {pwSaving ? 'Modification...' : 'Modifier le mot de passe'}
         </button>
       </form>
+
+      {/* Two-Factor Authentication */}
+      <TwoFactorCard />
     </div>
   );
 };

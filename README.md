@@ -134,3 +134,12 @@ Etat actuel
 
 - Frontend React minimal avec page `/login` et auth demo client-side.
 - invoice-service est buildable; les autres services sont des placeholders.
+  ┌────────────────────────┬──────────────┬───────┐
+  │         Email          │ Mot de passe │ Rôle  │
+  ├────────────────────────┼──────────────┼───────┤
+  │ admin@example.com      │ admin1234    │ ADMIN │
+  ├────────────────────────┼──────────────┼───────┤
+  │ yasminegr432@gmail.com │ yassmine123  │ ADMIN │
+  ├────────────────────────┼──────────────┼───────┤
+  │ user@example.com       │ user1234     │ USER  │
+  └────────────────────────┴──────────────┴───────┘

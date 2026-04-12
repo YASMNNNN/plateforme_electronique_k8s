@@ -14,6 +14,7 @@ const TwoFactorCard = () => {
   const { user, refreshUser } = useAuth();
   const [setup, setSetup] = useState<TotpSetupResponse | null>(null);
   const [code, setCode] = useState('');
+  const [disableCode, setDisableCode] = useState('');
   const [password, setPassword] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,8 +63,8 @@ const TwoFactorCard = () => {
     setNotice(null);
     setBusy(true);
     try {
-      await disableTotp(password, code.trim());
-      setCode('');
+      await disableTotp(password, disableCode.trim());
+      setDisableCode('');
       setPassword('');
       setRecoveryCodes(null);
       await refreshUser();
@@ -228,16 +229,16 @@ const TwoFactorCard = () => {
             />
             <input
               type="text"
-              inputMode="numeric"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
+              inputMode="text"
+              value={disableCode}
+              onChange={(e) => setDisableCode(e.target.value)}
               placeholder="Code 2FA (ou code de récupération)"
               required
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
             />
             <button
               type="submit"
-              disabled={busy}
+              disabled={busy || !password.trim() || !disableCode.trim()}
               className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 disabled:opacity-50"
             >
               Désactiver la 2FA
