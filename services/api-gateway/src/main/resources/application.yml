@@ -14,7 +14,7 @@ spring:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       routes:
         - id: auth-service
-          uri: lb://user-auth-service
+          uri: lb://USER-AUTH-SERVICE
           predicates:
             - Path=/api/auth/**,/api/users/**,/api/merchants/**
         - id: invoice-service

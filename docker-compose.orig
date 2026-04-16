@@ -228,7 +228,6 @@ services:
       - "monitoring.name=plateforme-userauth"
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      SERVER_PORT: 8080   # ✅ IMPORTANT FIX (corrige ton 502)
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/user_auth_db
       SPRING_DATASOURCE_USERNAME: plateforme_user
@@ -238,6 +237,8 @@ services:
       KEYCLOAK_REALM: plateforme-electronique
       KEYCLOAK_RESOURCE: user-auth-service
       KEYCLOAK_CREDENTIALS_SECRET: platform-secret
+      # 2FA — base64-encoded 32-byte AES-256 key. MUST be overridden in production.
+      # Rotating this value invalidates every enrolled TOTP secret.
       MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:-ZGV2LW9ubHktMzItYnl0ZS1rZXktZG8tbm90LXVzZSE=}
       MFA_ISSUER: ${MFA_ISSUER:-Plateforme Electronique}
     networks:
@@ -250,6 +251,7 @@ services:
       keycloak:
         condition: service_started
     restart: unless-stopped
+
   # Frontend
   frontend:
     image: yassmineg/plateforme-frontend:79308a1

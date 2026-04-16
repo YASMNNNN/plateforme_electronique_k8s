@@ -1,6 +1,5 @@
 package com.plateforme.electronique.auth.security;
 
-import com.plateforme.electronique.auth.entity.User;
 import com.plateforme.electronique.auth.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -30,30 +29,56 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
             throws ServletException, IOException {
+
+        // ✅ FIX IMPORTANT : bypass endpoints publics
+        String path = request.getServletPath();
+
+        if (path.startsWith("/api/auth") ||
+            path.startsWith("/actuator") ||
+            path.startsWith("/v3/api-docs") ||
+            path.startsWith("/swagger-ui")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
+
             try {
                 Jws<Claims> claims = jwtService.parse(token);
-                if (!JwtService.TOKEN_TYPE_ACCESS.equals(jwtService.tokenType(claims.getBody()))) {
+
+                if (!JwtService.TOKEN_TYPE_ACCESS.equals(
+                        jwtService.tokenType(claims.getBody()))) {
                     filterChain.doFilter(request, response);
                     return;
                 }
+
                 String email = claims.getBody().getSubject();
+
                 userRepository.findByEmail(email).ifPresent(user -> {
                     if (user.isActive()) {
-                        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                                user, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-                        );
+                        UsernamePasswordAuthenticationToken auth =
+                                new UsernamePasswordAuthenticationToken(
+                                        user,
+                                        null,
+                                        List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                                );
+
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     }
                 });
+
             } catch (Exception ignored) {
                 SecurityContextHolder.clearContext();
             }
         }
+
         filterChain.doFilter(request, response);
     }
 }
